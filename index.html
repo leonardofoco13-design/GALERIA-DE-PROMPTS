@@ -90,6 +90,18 @@ function toEmbedUrl(url) {
   return null;
 }
 
+function toAutoplayEmbedUrl(url) {
+  if (!url) return null;
+  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+  if (yt) {
+    const id = yt[1];
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1`;
+  }
+  const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
+  return null;
+}
+
 function toDirectImageUrl(url) {
   if (!url) return "";
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
@@ -245,21 +257,29 @@ function App() {
           {filtered.map((item) => {
             const [c1, c2] = themeFor(item.category || item.title);
             const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
+            const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
             return (
               <div key={item.id} className="card" style={styles.card}>
                 <div
                   style={{
                     ...styles.swatch,
-                    background: item.thumbnailUrl
+                    background: item.thumbnailUrl || autoplayEmbed || hasDirectVideo
                       ? "#0F1114"
                       : `linear-gradient(135deg, ${c1}, ${c2})`,
                   }}
                   onClick={() => setExpanded(item)}
                 >
-                  {item.thumbnailUrl ? (
+                  {autoplayEmbed ? (
+                    <iframe
+                      src={autoplayEmbed}
+                      style={{ ...styles.swatchImg, pointerEvents: "none", border: "none" }}
+                      allow="autoplay; encrypted-media"
+                      title={item.title}
+                    />
+                  ) : item.thumbnailUrl ? (
                     <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} />
                   ) : hasDirectVideo ? (
-                    <video src={item.videoUrl} muted preload="metadata" style={styles.swatchImg} />
+                    <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} />
                   ) : null}
                   {(item.videoUrl || hasDirectVideo) && (
                     <div style={styles.playBadge}>
