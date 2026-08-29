@@ -31,6 +31,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/lucide@0.383.0/dist/umd/lucide.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script type="text/babel" data-type="module">
 const { useState, useEffect, useMemo, useRef } = React;
@@ -75,7 +76,35 @@ function themeFor(seed) {
   return SWATCH_THEMES[h % SWATCH_THEMES.length];
 }
 
-const STORAGE_KEY = "galeria-video-prompts";
+const SUPABASE_URL = "https://eoxwnevswpwjqhqosbdu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_REVXV2TM7lOsPNq6EidVoA_iP04IYpS";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function rowToPrompt(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    description: row.description,
+    tags: row.tags || [],
+    prompt: row.prompt,
+    videoUrl: row.video_url || "",
+    thumbnailUrl: row.thumbnail_url || "",
+  };
+}
+
+function promptToRow(item) {
+  return {
+    id: item.id,
+    title: item.title,
+    category: item.category,
+    description: item.description,
+    tags: item.tags || [],
+    prompt: item.prompt,
+    video_url: item.videoUrl || "",
+    thumbnail_url: item.thumbnailUrl || "",
+  };
+}
 
 function isDirectVideoUrl(url) {
   return /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url || "");
@@ -184,25 +213,21 @@ function App() {
   const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setPrompts(JSON.parse(raw));
-    } catch (e) {
-      setSaveError(true);
-    } finally {
-      setLoading(false);
-    }
+    (async () => {
+      try {
+        const { data, error } = await supabaseClient
+          .from("prompts")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        setPrompts((data || []).map(rowToPrompt));
+      } catch (e) {
+        setSaveError(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
-
-  const persist = (next) => {
-    setPrompts(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setSaveError(false);
-    } catch (e) {
-      setSaveError(true);
-    }
-  };
 
   const categories = useMemo(() => {
     const set = new Set(prompts.map((p) => p.category).filter(Boolean));
@@ -242,19 +267,40 @@ function App() {
     } catch (e) {}
   };
 
-  const handleDelete = (id) => {
-    persist(prompts.filter((p) => p.id !== id));
+  const handleDelete = async (id) => {
+    const prev = prompts;
+    setPrompts(prompts.filter((p) => p.id !== id));
     setExpanded(null);
+    try {
+      const { error } = await supabaseClient.from("prompts").delete().eq("id", id);
+      if (error) throw error;
+      setSaveError(false);
+    } catch (e) {
+      setPrompts(prev);
+      setSaveError(true);
+    }
   };
 
-  const handleSave = (item) => {
-    if (editing) {
-      persist(prompts.map((p) => (p.id === item.id ? item : p)));
-    } else {
-      persist([{ ...item, id: `p-${Date.now()}` }, ...prompts]);
+  const handleSave = async (item) => {
+    try {
+      if (editing) {
+        const row = promptToRow(item);
+        const { error } = await supabaseClient.from("prompts").update(row).eq("id", item.id);
+        if (error) throw error;
+        setPrompts(prompts.map((p) => (p.id === item.id ? item : p)));
+      } else {
+        const newItem = { ...item, id: `p-${Date.now()}` };
+        const row = promptToRow(newItem);
+        const { error } = await supabaseClient.from("prompts").insert(row);
+        if (error) throw error;
+        setPrompts([newItem, ...prompts]);
+      }
+      setSaveError(false);
+      setModalOpen(false);
+      setEditing(null);
+    } catch (e) {
+      setSaveError(true);
     }
-    setModalOpen(false);
-    setEditing(null);
   };
 
   return (
@@ -311,7 +357,7 @@ function App() {
 
       {saveError && (
         <div style={styles.errorBanner}>
-          Não consegui salvar agora. Suas alterações podem não persistir — tente de novo em instantes.
+          Não consegui conectar ao banco de dados agora. Verifique sua internet e tente de novo.
         </div>
       )}
 
