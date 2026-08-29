@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Galeria de Prompts — Flow (Veo 3)</title>
+<title>Galeria de Prompts — Leo Gomes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -84,7 +84,7 @@ function isDirectVideoUrl(url) {
 function toEmbedUrl(url) {
   if (!url) return null;
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
-  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?modestbranding=1&rel=0&showinfo=0&iv_load_policy=3`;
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
   return null;
@@ -95,7 +95,7 @@ function toAutoplayEmbedUrl(url) {
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
   if (yt) {
     const id = yt[1];
-    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1`;
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&fs=0&disablekb=1`;
   }
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
@@ -107,6 +107,69 @@ function toDirectImageUrl(url) {
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (drive) return `https://drive.google.com/thumbnail?id=${drive[1]}&sz=w1000`;
   return url;
+}
+
+function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete }) {
+  const [c1, c2] = themeFor(item.category || item.title);
+  const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
+  const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
+  return (
+    <div className="card" style={styles.card}>
+      <div
+        style={{
+          ...styles.swatch,
+          background: item.thumbnailUrl || autoplayEmbed || hasDirectVideo
+            ? "#0F1114"
+            : `linear-gradient(135deg, ${c1}, ${c2})`,
+        }}
+        onClick={onOpen}
+      >
+        {autoplayEmbed ? (
+          <iframe
+            src={autoplayEmbed}
+            style={{ ...styles.swatchImg, pointerEvents: "none", border: "none" }}
+            allow="autoplay; encrypted-media"
+            title={item.title}
+          />
+        ) : item.thumbnailUrl ? (
+          <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} />
+        ) : hasDirectVideo ? (
+          <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} />
+        ) : null}
+        {(item.videoUrl || hasDirectVideo) && (
+          <div style={styles.playBadge}>
+            <Icon name="Film" size={13} color="#fff" />
+          </div>
+        )}
+        <span style={styles.swatchCategory}>{item.category}</span>
+        <div style={styles.scrubTrack}>
+          <div className="scrub" style={styles.scrub} />
+        </div>
+      </div>
+      <div style={styles.cardBody}>
+        <h3 style={styles.cardTitle}>{item.title}</h3>
+        <p style={styles.cardDesc}>{item.description}</p>
+        <div style={styles.tagRow}>
+          {(item.tags || []).slice(0, 3).map((t) => (
+            <span key={t} style={styles.tag}>{t}</span>
+          ))}
+        </div>
+        <div style={styles.promptPreview}>{item.prompt}</div>
+        <div style={styles.cardActions}>
+          <button className="copybtn" style={styles.copyBtn} onClick={onCopy}>
+            <Icon name={copiedId === item.id ? "Check" : "Copy"} size={14} />
+            {copiedId === item.id ? "Copiado" : "Copiar prompt"}
+          </button>
+          <button style={styles.iconBtn} onClick={onEdit}>
+            <Icon name="Pencil" size={14} color="#8A8F98" />
+          </button>
+          <button style={styles.iconBtn} onClick={onDelete}>
+            <Icon name="Trash2" size={14} color="#8A8F98" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function App() {
@@ -160,6 +223,17 @@ function App() {
     });
   }, [prompts, activeCategory, search]);
 
+  const groupedByCategory = useMemo(() => {
+    const order = categories.filter((c) => c !== "Todos");
+    const groups = {};
+    filtered.forEach((p) => {
+      const key = p.category || "Sem categoria";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    });
+    return order.filter((c) => groups[c] && groups[c].length).map((c) => ({ category: c, items: groups[c] }));
+  }, [filtered, categories]);
+
   const handleCopy = async (item) => {
     try {
       await navigator.clipboard.writeText(item.prompt);
@@ -192,7 +266,7 @@ function App() {
           </div>
           <div>
             <h1 style={styles.h1}>Galeria de Prompts</h1>
-            <p style={styles.sub}>Biblioteca visual para o Flow (Veo 3)</p>
+            <p style={styles.sub}>por Leo Gomes · Biblioteca visual para o Flow (Veo 3)</p>
           </div>
         </div>
         <button
@@ -252,76 +326,46 @@ function App() {
               : "Nenhum prompt encontrado para essa busca ou categoria."}
           </p>
         </div>
+      ) : activeCategory === "Todos" ? (
+        <div style={styles.sectionsWrap}>
+          {groupedByCategory.map((group) => (
+            <section key={group.category} style={styles.section}>
+              <h2 style={styles.sectionTitle}>{group.category}</h2>
+              <div style={styles.grid}>
+                {group.items.map((item) => (
+                  <PromptCard
+                    key={item.id}
+                    item={item}
+                    copiedId={copiedId}
+                    onOpen={() => setExpanded(item)}
+                    onCopy={() => handleCopy(item)}
+                    onEdit={() => {
+                      setEditing(item);
+                      setModalOpen(true);
+                    }}
+                    onDelete={() => handleDelete(item.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
         <div style={styles.grid}>
-          {filtered.map((item) => {
-            const [c1, c2] = themeFor(item.category || item.title);
-            const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
-            const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
-            return (
-              <div key={item.id} className="card" style={styles.card}>
-                <div
-                  style={{
-                    ...styles.swatch,
-                    background: item.thumbnailUrl || autoplayEmbed || hasDirectVideo
-                      ? "#0F1114"
-                      : `linear-gradient(135deg, ${c1}, ${c2})`,
-                  }}
-                  onClick={() => setExpanded(item)}
-                >
-                  {autoplayEmbed ? (
-                    <iframe
-                      src={autoplayEmbed}
-                      style={{ ...styles.swatchImg, pointerEvents: "none", border: "none" }}
-                      allow="autoplay; encrypted-media"
-                      title={item.title}
-                    />
-                  ) : item.thumbnailUrl ? (
-                    <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} />
-                  ) : hasDirectVideo ? (
-                    <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} />
-                  ) : null}
-                  {(item.videoUrl || hasDirectVideo) && (
-                    <div style={styles.playBadge}>
-                      <Icon name="Film" size={13} color="#fff" />
-                    </div>
-                  )}
-                  <span style={styles.swatchCategory}>{item.category}</span>
-                  <div style={styles.scrubTrack}>
-                    <div className="scrub" style={styles.scrub} />
-                  </div>
-                </div>
-                <div style={styles.cardBody}>
-                  <h3 style={styles.cardTitle}>{item.title}</h3>
-                  <p style={styles.cardDesc}>{item.description}</p>
-                  <div style={styles.tagRow}>
-                    {(item.tags || []).slice(0, 3).map((t) => (
-                      <span key={t} style={styles.tag}>{t}</span>
-                    ))}
-                  </div>
-                  <div style={styles.promptPreview}>{item.prompt}</div>
-                  <div style={styles.cardActions}>
-                    <button className="copybtn" style={styles.copyBtn} onClick={() => handleCopy(item)}>
-                      <Icon name={copiedId === item.id ? "Check" : "Copy"} size={14} />
-                      {copiedId === item.id ? "Copiado" : "Copiar prompt"}
-                    </button>
-                    <button
-                      style={styles.iconBtn}
-                      onClick={() => {
-                        setEditing(item);
-                        setModalOpen(true);
-                      }}
-                    >
-                      <Icon name="Pencil" size={14} color="#8A8F98" />
-                    </button>
-                    <button style={styles.iconBtn} onClick={() => handleDelete(item.id)}>
-                      <Icon name="Trash2" size={14} color="#8A8F98" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {filtered.map((item) => (
+            <PromptCard
+              key={item.id}
+              item={item}
+              copiedId={copiedId}
+              onOpen={() => setExpanded(item)}
+              onCopy={() => handleCopy(item)}
+              onEdit={() => {
+                setEditing(item);
+                setModalOpen(true);
+              }}
+              onDelete={() => handleDelete(item.id)}
+            />
+          ))}
         </div>
       )}
 
@@ -504,7 +548,10 @@ const styles = {
   errorBanner: { background: "#3A1F1F", border: "1px solid #5A2E2E", color: "#E8A0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
   empty: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "60px 0", textAlign: "center" },
   emptyText: { color: "#5A5F68", fontSize: 14, margin: 0, maxWidth: 320 },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 },
+  sectionsWrap: { display: "flex", flexDirection: "column", gap: 32 },
+  section: { display: "flex", flexDirection: "column", gap: 12 },
+  sectionTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 600, color: "#E8A33D", margin: 0, paddingBottom: 6, borderBottom: "1px solid #22262B" },
   card: { background: "#14171B", border: "1px solid #22262B", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" },
   swatch: { aspectRatio: "9 / 16", position: "relative", display: "flex", alignItems: "flex-start", padding: 10, cursor: "pointer", overflow: "hidden" },
   swatchCategory: { position: "relative", zIndex: 1, background: "rgba(11,13,16,0.55)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, fontFamily: "'Space Grotesk', sans-serif" },
