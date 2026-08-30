@@ -303,35 +303,6 @@ function App() {
     }
   };
 
-  const [importStatus, setImportStatus] = useState(null);
-
-  const handleImportLocal = async () => {
-    setImportStatus("loading");
-    try {
-      const raw = localStorage.getItem("galeria-video-prompts");
-      if (!raw) {
-        setImportStatus("empty");
-        return;
-      }
-      const oldPrompts = JSON.parse(raw);
-      if (!Array.isArray(oldPrompts) || oldPrompts.length === 0) {
-        setImportStatus("empty");
-        return;
-      }
-      const rows = oldPrompts.map((p) => promptToRow({ ...p, id: p.id || `p-${Date.now()}-${Math.random()}` }));
-      const { error } = await supabaseClient.from("prompts").insert(rows);
-      if (error) throw error;
-      const { data } = await supabaseClient
-        .from("prompts")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setPrompts((data || []).map(rowToPrompt));
-      setImportStatus("success");
-    } catch (e) {
-      setImportStatus("error");
-    }
-  };
-
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -344,30 +315,16 @@ function App() {
             <p style={styles.sub}>por Leo Gomes · Biblioteca visual para o Flow (Veo 3)</p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={styles.importBtn} onClick={handleImportLocal}>
-            <Icon name="Download" size={16} /> Importar dados antigos
-          </button>
-          <button
-            style={styles.addBtn}
-            onClick={() => {
-              setEditing(null);
-              setModalOpen(true);
-            }}
-          >
-            <Icon name="Plus" size={16} /> Novo prompt
-          </button>
-        </div>
+        <button
+          style={styles.addBtn}
+          onClick={() => {
+            setEditing(null);
+            setModalOpen(true);
+          }}
+        >
+          <Icon name="Plus" size={16} /> Novo prompt
+        </button>
       </header>
-
-      {importStatus && (
-        <div style={styles.errorBanner}>
-          {importStatus === "loading" && "Importando prompts antigos..."}
-          {importStatus === "success" && "Prompts antigos importados com sucesso!"}
-          {importStatus === "empty" && "Nenhum prompt antigo encontrado neste navegador."}
-          {importStatus === "error" && "Erro ao importar. Tente de novo."}
-        </div>
-      )}
 
       <div style={styles.searchRow}>
         <div style={styles.searchBox}>
@@ -627,7 +584,6 @@ const styles = {
   h1: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" },
   sub: { margin: 0, fontSize: 13, color: "#8A8F98" },
   addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#E8A33D", color: "#0B0D10", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
-  importBtn: { display: "flex", alignItems: "center", gap: 6, background: "transparent", color: "#8A8F98", border: "1px solid #22262B", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
   searchRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" },
   searchBox: { display: "flex", alignItems: "center", gap: 8, background: "#14171B", border: "1px solid #22262B", borderRadius: 8, padding: "9px 12px", flex: "1 1 320px" },
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#EDEAE3", fontSize: 14, width: "100%" },
