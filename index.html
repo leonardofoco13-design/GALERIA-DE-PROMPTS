@@ -211,6 +211,36 @@ function App() {
   const [copiedId, setCopiedId] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [saveError, setSaveError] = useState(false);
+  const [importStatus, setImportStatus] = useState(null);
+
+  const handleImportOldData = async () => {
+    setImportStatus("loading");
+    try {
+      const raw = localStorage.getItem("galeria-video-prompts");
+      if (!raw) {
+        setImportStatus("empty");
+        return;
+      }
+      const oldPrompts = JSON.parse(raw);
+      if (!Array.isArray(oldPrompts) || oldPrompts.length === 0) {
+        setImportStatus("empty");
+        return;
+      }
+      const rows = oldPrompts.map((item) =>
+        promptToRow({ ...item, id: item.id && item.id.startsWith("p-") ? item.id : `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` })
+      );
+      const { error } = await supabaseClient.from("prompts").insert(rows);
+      if (error) throw error;
+      const { data } = await supabaseClient
+        .from("prompts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setPrompts((data || []).map(rowToPrompt));
+      setImportStatus("success");
+    } catch (e) {
+      setImportStatus("error");
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -268,6 +298,11 @@ function App() {
   };
 
   const handleDelete = async (id) => {
+    const item = prompts.find((p) => p.id === id);
+    const confirmed = window.confirm(
+      `Tem certeza que quer apagar o prompt "${item ? item.title : "selecionado"}"? Essa ação não pode ser desfeita.`
+    );
+    if (!confirmed) return;
     const prev = prompts;
     setPrompts(prompts.filter((p) => p.id !== id));
     setExpanded(null);
@@ -315,16 +350,34 @@ function App() {
             <p style={styles.sub}>por Leo Gomes · Biblioteca visual para o Flow (Veo 3)</p>
           </div>
         </div>
-        <button
-          style={styles.addBtn}
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
-        >
-          <Icon name="Plus" size={16} /> Novo prompt
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button style={styles.importBtn} onClick={handleImportOldData}>
+            <Icon name="Download" size={16} /> Importar dados antigos
+          </button>
+          <button
+            style={styles.addBtn}
+            onClick={() => {
+              setEditing(null);
+              setModalOpen(true);
+            }}
+          >
+            <Icon name="Plus" size={16} /> Novo prompt
+          </button>
+        </div>
       </header>
+
+      {importStatus === "loading" && (
+        <div style={styles.importInfo}>Importando prompts antigos...</div>
+      )}
+      {importStatus === "success" && (
+        <div style={styles.importSuccess}>Prompts antigos importados com sucesso! Pode remover este botão agora.</div>
+      )}
+      {importStatus === "empty" && (
+        <div style={styles.importInfo}>Nenhum prompt antigo encontrado neste navegador.</div>
+      )}
+      {importStatus === "error" && (
+        <div style={styles.importError}>Não consegui importar. Tente de novo.</div>
+      )}
 
       <div style={styles.searchRow}>
         <div style={styles.searchBox}>
@@ -584,6 +637,10 @@ const styles = {
   h1: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" },
   sub: { margin: 0, fontSize: 13, color: "#8A8F98" },
   addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#E8A33D", color: "#0B0D10", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
+  importBtn: { display: "flex", alignItems: "center", gap: 6, background: "transparent", color: "#8A8F98", border: "1px dashed #3A3E44", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
+  importInfo: { background: "#1D2126", border: "1px solid #2A2E33", color: "#8A8F98", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
+  importSuccess: { background: "#1A3A24", border: "1px solid #2F5A3E", color: "#7EE0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
+  importError: { background: "#3A1F1F", border: "1px solid #5A2E2E", color: "#E8A0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
   searchRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" },
   searchBox: { display: "flex", alignItems: "center", gap: 8, background: "#14171B", border: "1px solid #22262B", borderRadius: 8, padding: "9px 12px", flex: "1 1 320px" },
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#EDEAE3", fontSize: 14, width: "100%" },
