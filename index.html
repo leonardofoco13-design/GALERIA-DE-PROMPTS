@@ -90,6 +90,7 @@ function rowToPrompt(row) {
     prompt: row.prompt,
     videoUrl: row.video_url || "",
     thumbnailUrl: row.thumbnail_url || "",
+    position: row.position ?? 0,
   };
 }
 
@@ -103,6 +104,7 @@ function promptToRow(item) {
     prompt: item.prompt,
     video_url: item.videoUrl || "",
     thumbnail_url: item.thumbnailUrl || "",
+    position: item.position ?? 0,
   };
 }
 
@@ -138,12 +140,22 @@ function toDirectImageUrl(url) {
   return url;
 }
 
-function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete }) {
+function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragStart, onDragOver, onDrop, isDragging }) {
   const [c1, c2] = themeFor(item.category || item.title);
   const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
   const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
   return (
-    <div className="card" style={styles.card}>
+    <div
+      className="card"
+      style={{ ...styles.card, opacity: isDragging ? 0.4 : 1, cursor: "grab" }}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      <div style={styles.dragHandle}>
+        <Icon name="GripVertical" size={14} color="#5A5F68" />
+      </div>
       <div
         style={{
           ...styles.swatch,
@@ -212,6 +224,29 @@ function App() {
   const [expanded, setExpanded] = useState(null);
   const [saveError, setSaveError] = useState(false);
   const [importStatus, setImportStatus] = useState(null);
+  const [draggedId, setDraggedId] = useState(null);
+
+  const handleReorder = async (draggedItemId, targetItemId, listItems) => {
+    if (draggedItemId === targetItemId) return;
+    const items = [...listItems];
+    const fromIndex = items.findIndex((p) => p.id === draggedItemId);
+    const toIndex = items.findIndex((p) => p.id === targetItemId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const [moved] = items.splice(fromIndex, 1);
+    items.splice(toIndex, 0, moved);
+    const reindexed = items.map((p, i) => ({ ...p, position: i }));
+    setPrompts((prev) => {
+      const others = prev.filter((p) => !reindexed.some((r) => r.id === p.id));
+      return [...others, ...reindexed].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    });
+    try {
+      await Promise.all(
+        reindexed.map((p) => supabaseClient.from("prompts").update({ position: p.position }).eq("id", p.id))
+      );
+    } catch (e) {
+      setSaveError(true);
+    }
+  };
 
   const handleImportOldData = async () => {
     setImportStatus("loading");
@@ -234,7 +269,7 @@ function App() {
       const { data } = await supabaseClient
         .from("prompts")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("position", { ascending: true, nullsFirst: false });
       setPrompts((data || []).map(rowToPrompt));
       setImportStatus("success");
     } catch (e) {
@@ -248,7 +283,7 @@ function App() {
         const { data, error } = await supabaseClient
           .from("prompts")
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("position", { ascending: true, nullsFirst: false });
         if (error) throw error;
         setPrompts((data || []).map(rowToPrompt));
       } catch (e) {
@@ -324,7 +359,9 @@ function App() {
         if (error) throw error;
         setPrompts(prompts.map((p) => (p.id === item.id ? item : p)));
       } else {
-        const newItem = { ...item, id: `p-${Date.now()}` };
+        const sameCategory = prompts.filter((p) => p.category === item.category);
+        const maxPos = sameCategory.reduce((max, p) => Math.max(max, p.position ?? 0), -1);
+        const newItem = { ...item, id: `p-${Date.now()}`, position: maxPos + 1 };
         const row = promptToRow(newItem);
         const { error } = await supabaseClient.from("prompts").insert(row);
         if (error) throw error;
@@ -436,6 +473,7 @@ function App() {
                     key={item.id}
                     item={item}
                     copiedId={copiedId}
+                    isDragging={draggedId === item.id}
                     onOpen={() => setExpanded(item)}
                     onCopy={() => handleCopy(item)}
                     onEdit={() => {
@@ -443,6 +481,13 @@ function App() {
                       setModalOpen(true);
                     }}
                     onDelete={() => handleDelete(item.id)}
+                    onDragStart={() => setDraggedId(item.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedId) handleReorder(draggedId, item.id, group.items);
+                      setDraggedId(null);
+                    }}
                   />
                 ))}
               </div>
@@ -456,6 +501,7 @@ function App() {
               key={item.id}
               item={item}
               copiedId={copiedId}
+              isDragging={draggedId === item.id}
               onOpen={() => setExpanded(item)}
               onCopy={() => handleCopy(item)}
               onEdit={() => {
@@ -463,6 +509,13 @@ function App() {
                 setModalOpen(true);
               }}
               onDelete={() => handleDelete(item.id)}
+              onDragStart={() => setDraggedId(item.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedId) handleReorder(draggedId, item.id, filtered);
+                setDraggedId(null);
+              }}
             />
           ))}
         </div>
@@ -655,7 +708,7 @@ const styles = {
   sectionsWrap: { display: "flex", flexDirection: "column", gap: 32 },
   section: { display: "flex", flexDirection: "column", gap: 12 },
   sectionTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 600, color: "#E8A33D", margin: 0, paddingBottom: 6, borderBottom: "1px solid #22262B" },
-  card: { background: "#14171B", border: "1px solid #22262B", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" },
+  card: { background: "#14171B", border: "1px solid #22262B", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" },
   swatch: { aspectRatio: "9 / 16", position: "relative", display: "flex", alignItems: "flex-start", padding: 10, cursor: "pointer", overflow: "hidden" },
   swatchCategory: { position: "relative", zIndex: 1, background: "rgba(11,13,16,0.55)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, fontFamily: "'Space Grotesk', sans-serif" },
   scrubTrack: { position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: "rgba(0,0,0,0.25)" },
@@ -666,6 +719,7 @@ const styles = {
   expandedMedia: { width: "100%", borderRadius: 10, display: "block", maxHeight: 320, objectFit: "cover", border: "none" },
   hint: { fontSize: 11, color: "#5A5F68", margin: "2px 0 0" },
   cardBody: { padding: 14, display: "flex", flexDirection: "column", gap: 8 },
+  dragHandle: { position: "absolute", top: 6, left: 6, zIndex: 2, background: "rgba(11,13,16,0.5)", borderRadius: 5, padding: 3, cursor: "grab" },
   cardTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.3 },
   cardDesc: { fontSize: 12.5, color: "#8A8F98", margin: 0, lineHeight: 1.4 },
   tagRow: { display: "flex", flexWrap: "wrap", gap: 6 },
