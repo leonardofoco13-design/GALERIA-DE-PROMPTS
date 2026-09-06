@@ -156,6 +156,7 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
   const [c1, c2] = themeFor(item.category || item.title);
   const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
   const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
+  const isDriveEmbed = /drive\.google\.com/.test(item.videoUrl || "");
   return (
     <div
       className="card"
@@ -176,26 +177,26 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
             ? "#0F1114"
             : `linear-gradient(135deg, ${c1}, ${c2})`,
         }}
-        onClick={onOpen}
+        onClick={isDriveEmbed ? undefined : onOpen}
       >
         {autoplayEmbed ? (
           <iframe
             src={autoplayEmbed}
-            style={{ ...styles.swatchImg, pointerEvents: "none", border: "none" }}
+            style={{ ...styles.swatchImg, pointerEvents: isDriveEmbed ? "auto" : "none", border: "none" }}
             allow="autoplay; encrypted-media"
             title={item.title}
           />
         ) : item.thumbnailUrl ? (
-          <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} />
+          <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} onClick={onOpen} />
         ) : hasDirectVideo ? (
-          <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} />
+          <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} onClick={onOpen} />
         ) : null}
         {(item.videoUrl || hasDirectVideo) && (
-          <div style={styles.playBadge}>
+          <div style={styles.playBadge} onClick={isDriveEmbed ? onOpen : undefined}>
             <Icon name="Film" size={13} color="#fff" />
           </div>
         )}
-        <span style={styles.swatchCategory}>{item.category}</span>
+        <span style={styles.swatchCategory} onClick={isDriveEmbed ? onOpen : undefined}>{item.category}</span>
         <div style={styles.scrubTrack}>
           <div className="scrub" style={styles.scrub} />
         </div>
