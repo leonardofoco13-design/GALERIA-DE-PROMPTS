@@ -81,6 +81,11 @@ const SUPABASE_KEY = "sb_publishable_REVXV2TM7lOsPNq6EidVoA_iP04IYpS";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function rowToPrompt(row) {
+  const variants = Array.isArray(row.prompt_variants) && row.prompt_variants.length
+    ? row.prompt_variants
+    : row.prompt
+    ? [{ label: "Padrão", text: row.prompt }]
+    : [];
   return {
     id: row.id,
     title: row.title,
@@ -88,6 +93,7 @@ function rowToPrompt(row) {
     description: row.description,
     tags: row.tags || [],
     prompt: row.prompt,
+    promptVariants: variants,
     videoUrl: row.video_url || "",
     thumbnailUrl: row.thumbnail_url || "",
     position: row.position ?? 0,
@@ -95,13 +101,19 @@ function rowToPrompt(row) {
 }
 
 function promptToRow(item) {
+  const variants = item.promptVariants && item.promptVariants.length
+    ? item.promptVariants
+    : item.prompt
+    ? [{ label: "Padrão", text: item.prompt }]
+    : [];
   return {
     id: item.id,
     title: item.title,
     category: item.category,
     description: item.description,
     tags: item.tags || [],
-    prompt: item.prompt,
+    prompt: variants[0] ? variants[0].text : "",
+    prompt_variants: variants,
     video_url: item.videoUrl || "",
     thumbnail_url: item.thumbnailUrl || "",
     position: item.position ?? 0,
@@ -129,7 +141,7 @@ function toAutoplayEmbedUrl(url) {
     return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&fs=0&disablekb=1`;
   }
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
-  if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
+  if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview?autoplay=1`;
   return null;
 }
 
@@ -140,7 +152,7 @@ function toDirectImageUrl(url) {
   return url;
 }
 
-function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragStart, onDragOver, onDrop, isDragging }) {
+function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
   const [c1, c2] = themeFor(item.category || item.title);
   const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
   const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
@@ -152,6 +164,7 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onDragEnd={onDragEnd}
     >
       <div style={styles.dragHandle}>
         <Icon name="GripVertical" size={14} color="#5A5F68" />
@@ -195,12 +208,25 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
             <span key={t} style={styles.tag}>{t}</span>
           ))}
         </div>
-        <div style={styles.promptPreview}>{item.prompt}</div>
+        <div style={styles.promptPreview}>
+          {(item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "Padrão", text: item.prompt }]).map((v, i) => (
+            <div key={i} style={styles.variantBlock}>
+              {(item.promptVariants || []).length > 1 && (
+                <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
+              )}
+              <div style={styles.variantText}>{v.text}</div>
+              <button
+                className="copybtn"
+                style={styles.copyBtnSmall}
+                onClick={() => onCopy(v.text, i)}
+              >
+                <Icon name={copiedId === `${item.id}-${i}` ? "Check" : "Copy"} size={12} />
+                {copiedId === `${item.id}-${i}` ? "Copiado" : "Copiar"}
+              </button>
+            </div>
+          ))}
+        </div>
         <div style={styles.cardActions}>
-          <button className="copybtn" style={styles.copyBtn} onClick={onCopy}>
-            <Icon name={copiedId === item.id ? "Check" : "Copy"} size={14} />
-            {copiedId === item.id ? "Copiado" : "Copiar prompt"}
-          </button>
           <button style={styles.iconBtn} onClick={onEdit}>
             <Icon name="Pencil" size={14} color="#8A8F98" />
           </button>
@@ -307,7 +333,7 @@ function App() {
         !q ||
         p.title.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
-        p.prompt.toLowerCase().includes(q) ||
+        (p.promptVariants || []).some((v) => v.text.toLowerCase().includes(q)) ||
         (p.tags || []).some((t) => t.toLowerCase().includes(q));
       return matchesCat && matchesSearch;
     });
@@ -324,10 +350,10 @@ function App() {
     return order.filter((c) => groups[c] && groups[c].length).map((c) => ({ category: c, items: groups[c] }));
   }, [filtered, categories]);
 
-  const handleCopy = async (item) => {
+  const handleCopy = async (itemId, text, variantIndex) => {
     try {
-      await navigator.clipboard.writeText(item.prompt);
-      setCopiedId(item.id);
+      await navigator.clipboard.writeText(text);
+      setCopiedId(`${itemId}-${variantIndex}`);
       setTimeout(() => setCopiedId(null), 1500);
     } catch (e) {}
   };
@@ -475,7 +501,7 @@ function App() {
                     copiedId={copiedId}
                     isDragging={draggedId === item.id}
                     onOpen={() => setExpanded(item)}
-                    onCopy={() => handleCopy(item)}
+                    onCopy={(text, i) => handleCopy(item.id, text, i)}
                     onEdit={() => {
                       setEditing(item);
                       setModalOpen(true);
@@ -488,6 +514,7 @@ function App() {
                       if (draggedId) handleReorder(draggedId, item.id, group.items);
                       setDraggedId(null);
                     }}
+                    onDragEnd={() => setDraggedId(null)}
                   />
                 ))}
               </div>
@@ -503,7 +530,7 @@ function App() {
               copiedId={copiedId}
               isDragging={draggedId === item.id}
               onOpen={() => setExpanded(item)}
-              onCopy={() => handleCopy(item)}
+              onCopy={(text, i) => handleCopy(item.id, text, i)}
               onEdit={() => {
                 setEditing(item);
                 setModalOpen(true);
@@ -516,6 +543,7 @@ function App() {
                 if (draggedId) handleReorder(draggedId, item.id, filtered);
                 setDraggedId(null);
               }}
+              onDragEnd={() => setDraggedId(null)}
             />
           ))}
         </div>
@@ -565,15 +593,22 @@ function App() {
                 <span key={t} style={styles.tag}>{t}</span>
               ))}
             </div>
-            <pre style={styles.fullPrompt}>{expanded.prompt}</pre>
-            <button
-              className="copybtn"
-              style={{ ...styles.copyBtn, alignSelf: "flex-start" }}
-              onClick={() => handleCopy(expanded)}
-            >
-              <Icon name={copiedId === expanded.id ? "Check" : "Copy"} size={14} />
-              {copiedId === expanded.id ? "Copiado" : "Copiar prompt"}
-            </button>
+            {(expanded.promptVariants && expanded.promptVariants.length ? expanded.promptVariants : [{ label: "Padrão", text: expanded.prompt }]).map((v, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(expanded.promptVariants || []).length > 1 && (
+                  <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
+                )}
+                <pre style={styles.fullPrompt}>{v.text}</pre>
+                <button
+                  className="copybtn"
+                  style={{ ...styles.copyBtn, alignSelf: "flex-start" }}
+                  onClick={() => handleCopy(expanded.id, v.text, i)}
+                >
+                  <Icon name={copiedId === `${expanded.id}-${i}` ? "Check" : "Copy"} size={14} />
+                  {copiedId === `${expanded.id}-${i}` ? "Copiado" : "Copiar prompt"}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -597,12 +632,24 @@ function PromptForm({ initial, onCancel, onSave }) {
   const [category, setCategory] = useState(initial?.category || "");
   const [description, setDescription] = useState(initial?.description || "");
   const [tags, setTags] = useState((initial?.tags || []).join(", "));
-  const [prompt, setPrompt] = useState(initial?.prompt || "");
+  const [variants, setVariants] = useState(
+    initial?.promptVariants && initial.promptVariants.length
+      ? initial.promptVariants
+      : [{ label: "", text: initial?.prompt || "" }]
+  );
   const [videoUrl, setVideoUrl] = useState(initial?.videoUrl || "");
   const [thumbnailUrl, setThumbnailUrl] = useState(initial?.thumbnailUrl || "");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const canSave = title.trim() && category.trim() && prompt.trim();
+  const canSave = title.trim() && category.trim() && variants.some((v) => v.text.trim());
+
+  const updateVariant = (index, field, value) => {
+    setVariants((prev) => prev.map((v, i) => (i === index ? { ...v, [field]: value } : v)));
+  };
+
+  const addVariant = () => setVariants((prev) => [...prev, { label: "", text: "" }]);
+
+  const removeVariant = (index) => setVariants((prev) => prev.filter((_, i) => i !== index));
 
   const filteredSuggestions = SUGGESTED_CATEGORIES.filter((c) =>
     c.toLowerCase().includes(category.toLowerCase())
@@ -646,8 +693,34 @@ function PromptForm({ initial, onCancel, onSave }) {
         <label style={styles.label}>Tags (separadas por vírgula)</label>
         <input style={styles.input} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="aéreo, amanhecer, cidade" />
 
-        <label style={styles.label}>Prompt completo</label>
-        <textarea style={styles.textarea} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Cole aqui o prompt que você usa no Flow..." rows={5} />
+        <label style={styles.label}>Prompts deste card</label>
+        {variants.map((v, i) => (
+          <div key={i} style={styles.variantFormRow}>
+            {variants.length > 1 && (
+              <input
+                style={{ ...styles.input, marginBottom: 6 }}
+                value={v.label}
+                onChange={(e) => updateVariant(i, "label", e.target.value)}
+                placeholder={`Nome do prompt ${i + 1} (ex: Sem áudio)`}
+              />
+            )}
+            <textarea
+              style={styles.textarea}
+              value={v.text}
+              onChange={(e) => updateVariant(i, "text", e.target.value)}
+              placeholder="Cole aqui o prompt que você usa no Flow..."
+              rows={4}
+            />
+            {variants.length > 1 && (
+              <button style={styles.removeVariantBtn} onClick={() => removeVariant(i)}>
+                <Icon name="Trash2" size={12} /> Remover este prompt
+              </button>
+            )}
+          </div>
+        ))}
+        <button style={styles.addVariantBtn} onClick={addVariant}>
+          <Icon name="Plus" size={14} /> Adicionar outro prompt neste card
+        </button>
 
         <label style={styles.label}>Link do vídeo (opcional)</label>
         <input style={styles.input} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="YouTube, Google Drive ou link direto .mp4" />
@@ -668,7 +741,9 @@ function PromptForm({ initial, onCancel, onSave }) {
                 category: category.trim(),
                 description: description.trim(),
                 tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-                prompt: prompt.trim(),
+                promptVariants: variants
+                  .map((v) => ({ label: v.label.trim(), text: v.text.trim() }))
+                  .filter((v) => v.text),
                 videoUrl: videoUrl.trim(),
                 thumbnailUrl: thumbnailUrl.trim(),
               })
@@ -724,7 +799,11 @@ const styles = {
   cardDesc: { fontSize: 12.5, color: "#8A8F98", margin: 0, lineHeight: 1.4 },
   tagRow: { display: "flex", flexWrap: "wrap", gap: 6 },
   tag: { fontSize: 10.5, color: "#2FA6A0", background: "#2FA6A014", border: "1px solid #2FA6A033", borderRadius: 999, padding: "2px 8px" },
-  promptPreview: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "8px 10px", lineHeight: 1.5, maxHeight: 58, overflow: "hidden" },
+  promptPreview: { display: "flex", flexDirection: "column", gap: 8 },
+  variantBlock: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 },
+  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em" },
+  variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", lineHeight: 1.5, maxHeight: 58, overflow: "hidden" },
+  copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
   cardActions: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
   copyBtn: { display: "flex", alignItems: "center", gap: 6, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 7, padding: "7px 11px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", flex: 1, justifyContent: "center" },
   iconBtn: { background: "transparent", border: "1px solid #22262B", borderRadius: 7, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
@@ -741,6 +820,9 @@ const styles = {
   label: { fontSize: 12, color: "#8A8F98", marginTop: 10, marginBottom: 4 },
   input: { background: "#0F1114", border: "1px solid #22262B", borderRadius: 7, padding: "9px 11px", color: "#EDEAE3", fontSize: 13.5, outline: "none", width: "100%" },
   textarea: { background: "#0F1114", border: "1px solid #22262B", borderRadius: 7, padding: "9px 11px", color: "#EDEAE3", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "'JetBrains Mono', monospace" },
+  variantFormRow: { display: "flex", flexDirection: "column", gap: 4, marginTop: 8, paddingTop: 8, borderTop: "1px solid #1D2126" },
+  removeVariantBtn: { display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "none", color: "#E8A0A0", fontSize: 11.5, cursor: "pointer", padding: "4px 0", alignSelf: "flex-start" },
+  addVariantBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px dashed #3A3E44", color: "#8A8F98", borderRadius: 7, padding: "8px 12px", fontSize: 13, cursor: "pointer", marginTop: 8 },
   suggestionsBox: { position: "absolute", top: "100%", left: 0, right: 0, background: "#1A1D22", border: "1px solid #2A2E33", borderRadius: 8, marginTop: 4, zIndex: 10, maxHeight: 180, overflowY: "auto" },
   suggestionItem: { padding: "8px 12px", fontSize: 13, cursor: "pointer", color: "#C8C4B8" },
   formActions: { display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 },
