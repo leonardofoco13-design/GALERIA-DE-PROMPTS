@@ -128,6 +128,8 @@ function toEmbedUrl(url) {
   if (!url) return null;
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
   if (yt) return `https://www.youtube.com/embed/${yt[1]}?modestbranding=1&rel=0&showinfo=0&iv_load_policy=3`;
+  const tiktok = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+  if (tiktok) return `https://www.tiktok.com/player/v1/${tiktok[1]}`;
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
   return null;
@@ -139,6 +141,11 @@ function toAutoplayEmbedUrl(url) {
   if (yt) {
     const id = yt[1];
     return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&fs=0&disablekb=1`;
+  }
+  const tiktok = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+  if (tiktok) {
+    const id = tiktok[1];
+    return `https://www.tiktok.com/player/v1/${id}?autoplay=1&muted=1&loop=1&controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0&closed_caption=0`;
   }
   const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
@@ -177,26 +184,26 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
             ? "#0F1114"
             : `linear-gradient(135deg, ${c1}, ${c2})`,
         }}
-        onClick={isDriveEmbed ? undefined : onOpen}
+        onClick={onOpen}
       >
         {autoplayEmbed ? (
           <iframe
             src={autoplayEmbed}
-            style={{ ...styles.swatchImg, pointerEvents: isDriveEmbed ? "auto" : "none", border: "none" }}
+            style={{ ...styles.swatchImg, pointerEvents: "none", border: "none" }}
             allow="autoplay; encrypted-media"
             title={item.title}
           />
         ) : item.thumbnailUrl ? (
-          <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} onClick={onOpen} />
+          <img src={toDirectImageUrl(item.thumbnailUrl)} alt={item.title} style={styles.swatchImg} />
         ) : hasDirectVideo ? (
-          <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} onClick={onOpen} />
+          <video src={item.videoUrl} muted autoPlay loop playsInline preload="auto" style={styles.swatchImg} />
         ) : null}
         {(item.videoUrl || hasDirectVideo) && (
-          <div style={styles.playBadge} onClick={isDriveEmbed ? onOpen : undefined}>
+          <div style={styles.playBadge}>
             <Icon name="Film" size={13} color="#fff" />
           </div>
         )}
-        <span style={styles.swatchCategory} onClick={isDriveEmbed ? onOpen : undefined}>{item.category}</span>
+        <span style={styles.swatchCategory}>{item.category}</span>
         <div style={styles.scrubTrack}>
           <div className="scrub" style={styles.scrub} />
         </div>
@@ -250,7 +257,6 @@ function App() {
   const [copiedId, setCopiedId] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [saveError, setSaveError] = useState(false);
-  const [importStatus, setImportStatus] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
 
   const handleReorder = async (draggedItemId, targetItemId, listItems) => {
@@ -272,35 +278,6 @@ function App() {
       );
     } catch (e) {
       setSaveError(true);
-    }
-  };
-
-  const handleImportOldData = async () => {
-    setImportStatus("loading");
-    try {
-      const raw = localStorage.getItem("galeria-video-prompts");
-      if (!raw) {
-        setImportStatus("empty");
-        return;
-      }
-      const oldPrompts = JSON.parse(raw);
-      if (!Array.isArray(oldPrompts) || oldPrompts.length === 0) {
-        setImportStatus("empty");
-        return;
-      }
-      const rows = oldPrompts.map((item) =>
-        promptToRow({ ...item, id: item.id && item.id.startsWith("p-") ? item.id : `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` })
-      );
-      const { error } = await supabaseClient.from("prompts").insert(rows);
-      if (error) throw error;
-      const { data } = await supabaseClient
-        .from("prompts")
-        .select("*")
-        .order("position", { ascending: true, nullsFirst: false });
-      setPrompts((data || []).map(rowToPrompt));
-      setImportStatus("success");
-    } catch (e) {
-      setImportStatus("error");
     }
   };
 
@@ -414,34 +391,16 @@ function App() {
             <p style={styles.sub}>por Leo Gomes · Biblioteca visual para o Flow (Veo 3)</p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button style={styles.importBtn} onClick={handleImportOldData}>
-            <Icon name="Download" size={16} /> Importar dados antigos
-          </button>
-          <button
-            style={styles.addBtn}
-            onClick={() => {
-              setEditing(null);
-              setModalOpen(true);
-            }}
-          >
-            <Icon name="Plus" size={16} /> Novo prompt
-          </button>
-        </div>
+        <button
+          style={styles.addBtn}
+          onClick={() => {
+            setEditing(null);
+            setModalOpen(true);
+          }}
+        >
+          <Icon name="Plus" size={16} /> Novo prompt
+        </button>
       </header>
-
-      {importStatus === "loading" && (
-        <div style={styles.importInfo}>Importando prompts antigos...</div>
-      )}
-      {importStatus === "success" && (
-        <div style={styles.importSuccess}>Prompts antigos importados com sucesso! Pode remover este botão agora.</div>
-      )}
-      {importStatus === "empty" && (
-        <div style={styles.importInfo}>Nenhum prompt antigo encontrado neste navegador.</div>
-      )}
-      {importStatus === "error" && (
-        <div style={styles.importError}>Não consegui importar. Tente de novo.</div>
-      )}
 
       <div style={styles.searchRow}>
         <div style={styles.searchBox}>
@@ -564,7 +523,7 @@ function App() {
                   <div style={styles.expandedMediaWrap}>
                     <iframe
                       src={embed}
-                      style={styles.expandedMedia}
+                      style={{ ...styles.expandedMedia, height: "100%", maxHeight: "none" }}
                       allow="autoplay; encrypted-media"
                       allowFullScreen
                       title={expanded.title}
@@ -725,7 +684,7 @@ function PromptForm({ initial, onCancel, onSave }) {
 
         <label style={styles.label}>Link do vídeo (opcional)</label>
         <input style={styles.input} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="YouTube, Google Drive ou link direto .mp4" />
-        <p style={styles.hint}>YouTube (inclusive Shorts) toca direto aqui dentro. Drive e links diretos também funcionam.</p>
+        <p style={styles.hint}>YouTube (inclusive Shorts) e TikTok tocam direto aqui dentro. Pro TikTok, use o link completo (tiktok.com/@usuario/video/123...), não o link curto de compartilhamento. Drive e links diretos também funcionam.</p>
 
         <label style={styles.label}>Link da imagem de capa (opcional)</label>
         <input style={styles.input} value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} placeholder="Link direto de uma imagem (.jpg, .png)" />
@@ -766,10 +725,6 @@ const styles = {
   h1: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" },
   sub: { margin: 0, fontSize: 13, color: "#8A8F98" },
   addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#E8A33D", color: "#0B0D10", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
-  importBtn: { display: "flex", alignItems: "center", gap: 6, background: "transparent", color: "#8A8F98", border: "1px dashed #3A3E44", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
-  importInfo: { background: "#1D2126", border: "1px solid #2A2E33", color: "#8A8F98", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
-  importSuccess: { background: "#1A3A24", border: "1px solid #2F5A3E", color: "#7EE0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
-  importError: { background: "#3A1F1F", border: "1px solid #5A2E2E", color: "#E8A0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
   searchRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" },
   searchBox: { display: "flex", alignItems: "center", gap: 8, background: "#14171B", border: "1px solid #22262B", borderRadius: 8, padding: "9px 12px", flex: "1 1 320px" },
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#EDEAE3", fontSize: 14, width: "100%" },
@@ -791,7 +746,7 @@ const styles = {
   scrub: { height: "100%", background: "#fff" },
   swatchImg: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" },
   playBadge: { position: "absolute", bottom: 8, right: 8, background: "rgba(11,13,16,0.6)", borderRadius: 6, padding: 5, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 },
-  expandedMediaWrap: { width: "100%", aspectRatio: "16 / 9", borderRadius: 10, overflow: "hidden", background: "#000" },
+  expandedMediaWrap: { width: "100%", height: 480, borderRadius: 10, overflow: "hidden", background: "#000" },
   expandedMedia: { width: "100%", borderRadius: 10, display: "block", maxHeight: 320, objectFit: "cover", border: "none" },
   hint: { fontSize: 11, color: "#5A5F68", margin: "2px 0 0" },
   cardBody: { padding: 14, display: "flex", flexDirection: "column", gap: 8 },
