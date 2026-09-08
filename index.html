@@ -219,7 +219,7 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
         <div style={styles.promptPreview}>
           {(item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "Padrão", text: item.prompt }]).map((v, i) => (
             <div key={i} style={styles.variantBlock}>
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: 2 }}>
                 {(item.promptVariants || []).length > 1 && (
                   <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
                 )}
@@ -759,7 +759,7 @@ const styles = {
   tag: { fontSize: 10.5, color: "#2FA6A0", background: "#2FA6A014", border: "1px solid #2FA6A033", borderRadius: 999, padding: "2px 8px" },
   promptPreview: { display: "flex", flexDirection: "column", gap: 5 },
   variantBlock: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
-  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" },
+  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
   variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
