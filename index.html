@@ -219,10 +219,12 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
         <div style={styles.promptPreview}>
           {(item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "Padrão", text: item.prompt }]).map((v, i) => (
             <div key={i} style={styles.variantBlock}>
-              {(item.promptVariants || []).length > 1 && (
-                <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
-              )}
-              <div style={styles.variantText}>{v.text}</div>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {(item.promptVariants || []).length > 1 && (
+                  <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
+                )}
+                <div style={styles.variantText}>{v.text}</div>
+              </div>
               <button
                 className="copybtn"
                 style={styles.copyBtnSmall}
@@ -755,10 +757,11 @@ const styles = {
   cardDesc: { fontSize: 12.5, color: "#8A8F98", margin: 0, lineHeight: 1.4 },
   tagRow: { display: "flex", flexWrap: "wrap", gap: 6 },
   tag: { fontSize: 10.5, color: "#2FA6A0", background: "#2FA6A014", border: "1px solid #2FA6A033", borderRadius: 999, padding: "2px 8px" },
-  promptPreview: { display: "flex", flexDirection: "column", gap: 8 },
-  variantBlock: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 },
-  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em" },
-  variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", lineHeight: 1.5, maxHeight: 58, overflow: "hidden" },
+  promptPreview: { display: "flex", flexDirection: "column", gap: 5 },
+  variantBlock: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
+  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" },
+  copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
+  variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
   cardActions: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
   copyBtn: { display: "flex", alignItems: "center", gap: 6, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 7, padding: "7px 11px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", flex: 1, justifyContent: "center" },
