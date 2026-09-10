@@ -90,6 +90,7 @@ function rowToPrompt(row) {
     id: row.id,
     title: row.title,
     category: row.category,
+    subcategory: row.subcategory || "",
     description: row.description,
     tags: row.tags || [],
     prompt: row.prompt,
@@ -110,6 +111,7 @@ function promptToRow(item) {
     id: item.id,
     title: item.title,
     category: item.category,
+    subcategory: item.subcategory || "",
     description: item.description,
     tags: item.tags || [],
     prompt: variants[0] ? variants[0].text : "",
@@ -159,7 +161,7 @@ function toDirectImageUrl(url) {
   return url;
 }
 
-function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
+function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplicate, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
   const [c1, c2] = themeFor(item.category || item.title);
   const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
   const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
@@ -217,28 +219,33 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDragSt
           ))}
         </div>
         <div style={styles.promptPreview}>
-          {(item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "Padrão", text: item.prompt }]).map((v, i) => (
-            <div key={i} style={styles.variantBlock}>
-              <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: 2 }}>
-                {(item.promptVariants || []).length > 1 && (
-                  <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
-                )}
-                <div style={styles.variantText}>{v.text}</div>
+          {(() => {
+            const variantList = item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "Padrão", text: item.prompt }];
+            const isCompact = variantList.length > 1;
+            return variantList.map((v, i) => (
+              <div key={i} style={isCompact ? styles.variantBlockCompact : styles.variantBlock}>
+                <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: 2 }}>
+                  {isCompact && <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>}
+                  {!isCompact && <div style={styles.variantText}>{v.text}</div>}
+                </div>
+                <button
+                  className="copybtn"
+                  style={styles.copyBtnSmall}
+                  onClick={() => onCopy(v.text, i)}
+                >
+                  <Icon name={copiedId === `${item.id}-${i}` ? "Check" : "Copy"} size={12} />
+                  {copiedId === `${item.id}-${i}` ? "Copiado" : "Copiar"}
+                </button>
               </div>
-              <button
-                className="copybtn"
-                style={styles.copyBtnSmall}
-                onClick={() => onCopy(v.text, i)}
-              >
-                <Icon name={copiedId === `${item.id}-${i}` ? "Check" : "Copy"} size={12} />
-                {copiedId === `${item.id}-${i}` ? "Copiado" : "Copiar"}
-              </button>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
         <div style={styles.cardActions}>
           <button style={styles.iconBtn} onClick={onEdit}>
             <Icon name="Pencil" size={14} color="#8A8F98" />
+          </button>
+          <button style={styles.iconBtn} onClick={onDuplicate}>
+            <Icon name="Copy" size={14} color="#8A8F98" />
           </button>
           <button style={styles.iconBtn} onClick={onDelete}>
             <Icon name="Trash2" size={14} color="#8A8F98" />
@@ -313,6 +320,7 @@ function App() {
         !q ||
         p.title.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
+        (p.subcategory || "").toLowerCase().includes(q) ||
         (p.promptVariants || []).some((v) => v.text.toLowerCase().includes(q)) ||
         (p.tags || []).some((t) => t.toLowerCase().includes(q));
       return matchesCat && matchesSearch;
@@ -327,7 +335,26 @@ function App() {
       if (!groups[key]) groups[key] = [];
       groups[key].push(p);
     });
-    return order.filter((c) => groups[c] && groups[c].length).map((c) => ({ category: c, items: groups[c] }));
+    return order
+      .filter((c) => groups[c] && groups[c].length)
+      .map((c) => {
+        const items = groups[c];
+        const subGroups = {};
+        const subOrder = [];
+        items.forEach((p) => {
+          const subKey = p.subcategory && p.subcategory.trim() ? p.subcategory.trim() : "__none__";
+          if (!subGroups[subKey]) {
+            subGroups[subKey] = [];
+            subOrder.push(subKey);
+          }
+          subGroups[subKey].push(p);
+        });
+        const subsections = subOrder.map((subKey) => ({
+          subcategory: subKey === "__none__" ? null : subKey,
+          items: subGroups[subKey],
+        }));
+        return { category: c, items, subsections };
+      });
   }, [filtered, categories]);
 
   const handleCopy = async (itemId, text, variantIndex) => {
@@ -376,6 +403,29 @@ function App() {
       setSaveError(false);
       setModalOpen(false);
       setEditing(null);
+    } catch (e) {
+      setSaveError(true);
+    }
+  };
+
+  const handleDuplicate = async (item) => {
+    const sameCategory = prompts.filter((p) => p.category === item.category);
+    const maxPos = sameCategory.reduce((max, p) => Math.max(max, p.position ?? 0), -1);
+    const newItem = {
+      ...item,
+      id: `p-${Date.now()}`,
+      title: `${item.title} (cópia)`,
+      position: maxPos + 1,
+      promptVariants: (item.promptVariants || []).map((v) => ({ ...v })),
+    };
+    try {
+      const row = promptToRow(newItem);
+      const { error } = await supabaseClient.from("prompts").insert(row);
+      if (error) throw error;
+      setPrompts([newItem, ...prompts]);
+      setEditing(newItem);
+      setModalOpen(true);
+      setSaveError(false);
     } catch (e) {
       setSaveError(true);
     }
@@ -455,31 +505,37 @@ function App() {
           {groupedByCategory.map((group) => (
             <section key={group.category} style={styles.section}>
               <h2 style={styles.sectionTitle}>{group.category}</h2>
-              <div style={styles.grid}>
-                {group.items.map((item) => (
-                  <PromptCard
-                    key={item.id}
-                    item={item}
-                    copiedId={copiedId}
-                    isDragging={draggedId === item.id}
-                    onOpen={() => setExpanded(item)}
-                    onCopy={(text, i) => handleCopy(item.id, text, i)}
-                    onEdit={() => {
-                      setEditing(item);
-                      setModalOpen(true);
-                    }}
-                    onDelete={() => handleDelete(item.id)}
-                    onDragStart={() => setDraggedId(item.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (draggedId) handleReorder(draggedId, item.id, group.items);
-                      setDraggedId(null);
-                    }}
-                    onDragEnd={() => setDraggedId(null)}
-                  />
-                ))}
-              </div>
+              {group.subsections.map((sub, si) => (
+                <div key={sub.subcategory || `__none__-${si}`} style={styles.subsection}>
+                  {sub.subcategory && <h3 style={styles.subsectionTitle}>{sub.subcategory}</h3>}
+                  <div style={styles.grid}>
+                    {sub.items.map((item) => (
+                      <PromptCard
+                        key={item.id}
+                        item={item}
+                        copiedId={copiedId}
+                        isDragging={draggedId === item.id}
+                        onOpen={() => setExpanded(item)}
+                        onCopy={(text, i) => handleCopy(item.id, text, i)}
+                        onEdit={() => {
+                          setEditing(item);
+                          setModalOpen(true);
+                        }}
+                        onDelete={() => handleDelete(item.id)}
+                        onDuplicate={() => handleDuplicate(item)}
+                        onDragStart={() => setDraggedId(item.id)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedId) handleReorder(draggedId, item.id, sub.items);
+                          setDraggedId(null);
+                        }}
+                        onDragEnd={() => setDraggedId(null)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </section>
           ))}
         </div>
@@ -498,6 +554,7 @@ function App() {
                 setModalOpen(true);
               }}
               onDelete={() => handleDelete(item.id)}
+                    onDuplicate={() => handleDuplicate(item)}
               onDragStart={() => setDraggedId(item.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -592,6 +649,7 @@ function App() {
 function PromptForm({ initial, onCancel, onSave }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [category, setCategory] = useState(initial?.category || "");
+  const [subcategory, setSubcategory] = useState(initial?.subcategory || "");
   const [description, setDescription] = useState(initial?.description || "");
   const [tags, setTags] = useState((initial?.tags || []).join(", "));
   const [variants, setVariants] = useState(
@@ -649,6 +707,15 @@ function PromptForm({ initial, onCancel, onSave }) {
           )}
         </div>
 
+        <label style={styles.label}>Subcategoria (opcional)</label>
+        <input
+          style={styles.input}
+          value={subcategory}
+          onChange={(e) => setSubcategory(e.target.value)}
+          placeholder="Ex: Vestidos, Moda praia..."
+        />
+        <p style={styles.hint}>Agrupa os cards dentro da categoria. Prompts com a mesma subcategoria ficam juntos.</p>
+
         <label style={styles.label}>Descrição curta</label>
         <input style={styles.input} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Uma frase resumindo o resultado visual" />
 
@@ -701,6 +768,7 @@ function PromptForm({ initial, onCancel, onSave }) {
                 id: initial?.id,
                 title: title.trim(),
                 category: category.trim(),
+                subcategory: subcategory.trim(),
                 description: description.trim(),
                 tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
                 promptVariants: variants
@@ -741,6 +809,8 @@ const styles = {
   sectionsWrap: { display: "flex", flexDirection: "column", gap: 32 },
   section: { display: "flex", flexDirection: "column", gap: 12 },
   sectionTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 600, color: "#E8A33D", margin: 0, paddingBottom: 6, borderBottom: "1px solid #22262B" },
+  subsection: { display: "flex", flexDirection: "column", gap: 10, marginTop: 4 },
+  subsectionTitle: { fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "#8A8F98", margin: 0, marginLeft: 2 },
   card: { background: "#14171B", border: "1px solid #22262B", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" },
   swatch: { aspectRatio: "9 / 16", position: "relative", display: "flex", alignItems: "flex-start", padding: 10, cursor: "pointer", overflow: "hidden" },
   swatchCategory: { position: "relative", zIndex: 1, background: "rgba(11,13,16,0.55)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, fontFamily: "'Space Grotesk', sans-serif" },
@@ -759,6 +829,7 @@ const styles = {
   tag: { fontSize: 10.5, color: "#2FA6A0", background: "#2FA6A014", border: "1px solid #2FA6A033", borderRadius: 999, padding: "2px 8px" },
   promptPreview: { display: "flex", flexDirection: "column", gap: 5 },
   variantBlock: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
+  variantBlockCompact: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
   variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
   variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
