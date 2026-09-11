@@ -9,11 +9,11 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #120F0D; }
-  ::selection { background: #FF5A4455; }
+  ::selection { background: #2E7D7255; }
   .chip { transition: all .15s ease; }
-  .chip:hover { border-color: #FF5A44; color: #FF5A44; }
+  .chip:hover { border-color: #2E7D72; color: #2E7D72; }
   .card { transition: transform .18s ease, border-color .18s ease; }
-  .card:hover { transform: translateY(-3px); border-color: #FF5A4466; }
+  .card:hover { transform: translateY(-3px); border-color: #2E7D7266; }
   .scrub { transform: scaleX(0); transform-origin: left; transition: transform .5s ease; }
   .card:hover .scrub { transform: scaleX(1); }
   .copybtn { transition: background .15s ease, transform .1s ease; }
@@ -806,11 +806,11 @@ const styles = {
   page: { minHeight: "100vh", background: "#120F0D", color: "#F3ECE0", fontFamily: "'Inter', sans-serif", padding: "28px 24px 60px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, flexWrap: "wrap", gap: 12 },
   headerLeft: { display: "flex", alignItems: "center", gap: 12 },
-  logoMark: { width: 40, height: 40, borderRadius: "4px 12px 4px 4px", background: "#FF5A44", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoMark: { width: 40, height: 40, borderRadius: "4px 12px 4px 4px", background: "#2E7D72", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoMonogram: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 17, color: "#120F0D" },
   h1: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" },
   sub: { margin: 0, fontSize: 13, color: "#A89C8E" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#FF5A44", color: "#120F0D", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', sans-serif" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#2E7D72", color: "#120F0D", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', sans-serif" },
   searchRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" },
   searchBox: { display: "flex", alignItems: "center", gap: 8, background: "#1B1613", border: "1px solid #2E241E", borderRadius: 8, padding: "9px 12px", flex: "1 1 320px" },
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#F3ECE0", fontSize: 14, width: "100%" },
@@ -819,7 +819,7 @@ const styles = {
   chipWrap: { display: "flex", alignItems: "center", gap: 2 },
   chipRenameBtn: { background: "transparent", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" },
   chip: { background: "#1B1613", border: "1px solid #2E241E", color: "#A89C8E", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, cursor: "pointer" },
-  chipActive: { borderColor: "#FF5A44", color: "#FF5A44", background: "#FF5A4414" },
+  chipActive: { borderColor: "#2E7D72", color: "#2E7D72", background: "#2E7D7214" },
   errorBanner: { background: "#2E1815", border: "1px solid #4A2620", color: "#E8948C", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
   empty: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "60px 0", textAlign: "center" },
   emptyText: { color: "#7A6E60", fontSize: 14, margin: 0, maxWidth: 320 },
@@ -850,7 +850,7 @@ const styles = {
   promptPreview: { display: "flex", flexDirection: "column", gap: 5 },
   variantBlock: { background: "#171310", border: "1px solid #26201B", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
   variantBlockCompact: { background: "#171310", border: "1px solid #26201B", borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#FF5A44", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
+  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#2E7D72", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
   variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#8C8072", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
@@ -859,7 +859,7 @@ const styles = {
   iconBtn: { background: "transparent", border: "1px solid #2E241E", borderRadius: 7, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 },
   expandedCard: { background: "#1B1613", border: "1px solid #2E241E", borderRadius: 14, padding: 26, maxWidth: 520, width: "100%", position: "relative", display: "flex", flexDirection: "column", gap: 10, maxHeight: "80vh", overflowY: "auto" },
-  expandedCategory: { fontSize: 12, color: "#FF5A44", fontWeight: 600 },
+  expandedCategory: { fontSize: 12, color: "#2E7D72", fontWeight: 600 },
   expandedTitle: { fontFamily: "'Fraunces', serif", fontSize: 20, margin: 0 },
   expandedDesc: { color: "#A89C8E", fontSize: 13.5, margin: 0 },
   fullPrompt: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5, color: "#D8D4C8", background: "#171310", border: "1px solid #26201B", borderRadius: 8, padding: 14, whiteSpace: "pre-wrap", lineHeight: 1.6, margin: 0 },
@@ -877,7 +877,7 @@ const styles = {
   suggestionItem: { padding: "8px 12px", fontSize: 13, cursor: "pointer", color: "#C8C4B8" },
   formActions: { display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 },
   cancelBtn: { background: "transparent", border: "1px solid #2E241E", color: "#A89C8E", borderRadius: 8, padding: "9px 16px", fontSize: 13.5, cursor: "pointer" },
-  saveBtn: { background: "#FF5A44", color: "#120F0D", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
+  saveBtn: { background: "#2E7D72", color: "#120F0D", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
