@@ -5,22 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Galeria de Prompts — Leo Gomes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; background: #0B0D10; }
-  ::selection { background: #E8A33D55; }
+  body { margin: 0; background: #120F0D; }
+  ::selection { background: #FF5A4455; }
   .chip { transition: all .15s ease; }
-  .chip:hover { border-color: #E8A33D; color: #E8A33D; }
+  .chip:hover { border-color: #FF5A44; color: #FF5A44; }
   .card { transition: transform .18s ease, border-color .18s ease; }
-  .card:hover { transform: translateY(-3px); border-color: #E8A33D66; }
+  .card:hover { transform: translateY(-3px); border-color: #FF5A4466; }
   .scrub { transform: scaleX(0); transform-origin: left; transition: transform .5s ease; }
   .card:hover .scrub { transform: scaleX(1); }
   .copybtn { transition: background .15s ease, transform .1s ease; }
   .copybtn:active { transform: scale(0.94); }
   textarea, input { font-family: inherit; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background: #2A2E33; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { background: #362B24; border-radius: 4px; }
   #root { min-height: 100vh; }
 </style>
 </head>
@@ -64,10 +64,10 @@ const SUGGESTED_CATEGORIES = [
 ];
 
 const SWATCH_THEMES = [
-  ["#F4A340", "#E8622C"], ["#2FA6A0", "#1D5C63"], ["#8A6FE8", "#4B2E9E"],
-  ["#E85C7B", "#7A1F3D"], ["#6FBF73", "#1F5C3D"], ["#4FA3E8", "#1D3E6B"],
-  ["#E8C34F", "#8A5A1F"], ["#C97BE8", "#5A1F7A"], ["#E87B4F", "#7A2E1F"],
-  ["#5FE8C3", "#1F7A5E"],
+  ["#E0784F", "#A84A2B"], ["#3E8E86", "#1F4F4A"], ["#8B5FA3", "#4F2E63"],
+  ["#D9667A", "#7A2E3D"], ["#8FA35E", "#4A5A2E"], ["#5B84A8", "#2E4A63"],
+  ["#D4A85E", "#8A6B2E"], ["#A98FD4", "#5A4A8A"], ["#C2703F", "#733E1F"],
+  ["#6BB39A", "#356B58"],
 ];
 
 function themeFor(seed) {
@@ -177,13 +177,13 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
       onDragEnd={onDragEnd}
     >
       <div style={styles.dragHandle}>
-        <Icon name="GripVertical" size={14} color="#5A5F68" />
+        <Icon name="GripVertical" size={14} color="#7A6E60" />
       </div>
       <div
         style={{
           ...styles.swatch,
           background: item.thumbnailUrl || autoplayEmbed || hasDirectVideo
-            ? "#0F1114"
+            ? "#171310"
             : `linear-gradient(135deg, ${c1}, ${c2})`,
         }}
         onClick={onOpen}
@@ -242,13 +242,13 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
         </div>
         <div style={styles.cardActions}>
           <button style={styles.iconBtn} onClick={onEdit}>
-            <Icon name="Pencil" size={14} color="#8A8F98" />
+            <Icon name="Pencil" size={14} color="#A89C8E" />
           </button>
           <button style={styles.iconBtn} onClick={onDuplicate}>
-            <Icon name="Copy" size={14} color="#8A8F98" />
+            <Icon name="Copy" size={14} color="#A89C8E" />
           </button>
           <button style={styles.iconBtn} onClick={onDelete}>
-            <Icon name="Trash2" size={14} color="#8A8F98" />
+            <Icon name="Trash2" size={14} color="#A89C8E" />
           </button>
         </div>
       </div>
@@ -458,7 +458,7 @@ function App() {
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <div style={styles.logoMark}>
-            <Icon name="Clapperboard" size={20} color="#0B0D10" />
+            <span style={styles.logoMonogram}>LG</span>
           </div>
           <div>
             <h1 style={styles.h1}>Galeria de Prompts</h1>
@@ -478,7 +478,7 @@ function App() {
 
       <div style={styles.searchRow}>
         <div style={styles.searchBox}>
-          <Icon name="Search" size={16} color="#8A8F98" />
+          <Icon name="Search" size={16} color="#A89C8E" />
           <input
             style={styles.searchInput}
             placeholder="Buscar por título, tag ou palavra do prompt..."
@@ -508,7 +508,7 @@ function App() {
                 title="Renomear categoria"
                 onClick={() => handleRenameCategory(c)}
               >
-                <Icon name="Pencil" size={11} color="#5A5F68" />
+                <Icon name="Pencil" size={11} color="#7A6E60" />
               </button>
             )}
           </div>
@@ -522,10 +522,10 @@ function App() {
       )}
 
       {loading ? (
-        <p style={{ color: "#8A8F98", fontFamily: "Inter, sans-serif" }}>Carregando...</p>
+        <p style={{ color: "#A89C8E", fontFamily: "Inter, sans-serif" }}>Carregando...</p>
       ) : filtered.length === 0 ? (
         <div style={styles.empty}>
-          <Icon name="Film" size={28} color="#5A5F68" />
+          <Icon name="Film" size={28} color="#7A6E60" />
           <p style={styles.emptyText}>
             {prompts.length === 0
               ? "Sua galeria está vazia. Adicione o primeiro prompt."
@@ -536,7 +536,17 @@ function App() {
         <div style={styles.sectionsWrap}>
           {groupedByCategory.map((group) => (
             <section key={group.category} style={styles.section}>
-              {activeCategory === "Todos" && <h2 style={styles.sectionTitle}>{group.category}</h2>}
+              {activeCategory === "Todos" && (
+                <div style={styles.sectionHeader}>
+                  <span
+                    style={{
+                      ...styles.sectionChip,
+                      background: `linear-gradient(135deg, ${themeFor(group.category)[0]}, ${themeFor(group.category)[1]})`,
+                    }}
+                  />
+                  <h2 style={styles.sectionTitle}>{group.category}</h2>
+                </div>
+              )}
               {group.subsections.map((sub, si) => (
                 <div key={sub.subcategory || `__none__-${si}`} style={styles.subsection}>
                   {sub.subcategory && <h3 style={styles.subsectionTitle}>{sub.subcategory}</h3>}
@@ -577,7 +587,7 @@ function App() {
         <div style={styles.overlay} onClick={() => setExpanded(null)}>
           <div style={styles.expandedCard} onClick={(e) => e.stopPropagation()}>
             <button style={styles.closeBtn} onClick={() => setExpanded(null)}>
-              <Icon name="X" size={18} color="#8A8F98" />
+              <Icon name="X" size={18} color="#A89C8E" />
             </button>
             {(() => {
               const embed = toEmbedUrl(expanded.videoUrl);
@@ -686,7 +696,7 @@ function PromptForm({ initial, onCancel, onSave }) {
         <div style={styles.formHeader}>
           <h2 style={styles.formTitle}>{initial ? "Editar prompt" : "Novo prompt"}</h2>
           <button style={styles.closeBtn} onClick={onCancel}>
-            <Icon name="X" size={18} color="#8A8F98" />
+            <Icon name="X" size={18} color="#A89C8E" />
           </button>
         </div>
 
@@ -793,78 +803,81 @@ function PromptForm({ initial, onCancel, onSave }) {
 }
 
 const styles = {
-  page: { minHeight: "100vh", background: "#0B0D10", color: "#EDEAE3", fontFamily: "'Inter', sans-serif", padding: "28px 24px 60px" },
+  page: { minHeight: "100vh", background: "#120F0D", color: "#F3ECE0", fontFamily: "'Inter', sans-serif", padding: "28px 24px 60px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, flexWrap: "wrap", gap: 12 },
   headerLeft: { display: "flex", alignItems: "center", gap: 12 },
-  logoMark: { width: 38, height: 38, borderRadius: 10, background: "#E8A33D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  h1: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" },
-  sub: { margin: 0, fontSize: 13, color: "#8A8F98" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#E8A33D", color: "#0B0D10", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" },
+  logoMark: { width: 40, height: 40, borderRadius: "4px 12px 4px 4px", background: "#FF5A44", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoMonogram: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 17, color: "#120F0D" },
+  h1: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" },
+  sub: { margin: 0, fontSize: 13, color: "#A89C8E" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#FF5A44", color: "#120F0D", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', sans-serif" },
   searchRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" },
-  searchBox: { display: "flex", alignItems: "center", gap: 8, background: "#14171B", border: "1px solid #22262B", borderRadius: 8, padding: "9px 12px", flex: "1 1 320px" },
-  searchInput: { background: "transparent", border: "none", outline: "none", color: "#EDEAE3", fontSize: 14, width: "100%" },
-  countText: { fontSize: 12, color: "#5A5F68", whiteSpace: "nowrap" },
+  searchBox: { display: "flex", alignItems: "center", gap: 8, background: "#1B1613", border: "1px solid #2E241E", borderRadius: 8, padding: "9px 12px", flex: "1 1 320px" },
+  searchInput: { background: "transparent", border: "none", outline: "none", color: "#F3ECE0", fontSize: 14, width: "100%" },
+  countText: { fontSize: 12, color: "#7A6E60", whiteSpace: "nowrap" },
   chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 22 },
   chipWrap: { display: "flex", alignItems: "center", gap: 2 },
   chipRenameBtn: { background: "transparent", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" },
-  chip: { background: "#14171B", border: "1px solid #22262B", color: "#8A8F98", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, cursor: "pointer" },
-  chipActive: { borderColor: "#E8A33D", color: "#E8A33D", background: "#E8A33D14" },
-  errorBanner: { background: "#3A1F1F", border: "1px solid #5A2E2E", color: "#E8A0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
+  chip: { background: "#1B1613", border: "1px solid #2E241E", color: "#A89C8E", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, cursor: "pointer" },
+  chipActive: { borderColor: "#FF5A44", color: "#FF5A44", background: "#FF5A4414" },
+  errorBanner: { background: "#2E1815", border: "1px solid #4A2620", color: "#E8948C", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
   empty: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "60px 0", textAlign: "center" },
-  emptyText: { color: "#5A5F68", fontSize: 14, margin: 0, maxWidth: 320 },
+  emptyText: { color: "#7A6E60", fontSize: 14, margin: 0, maxWidth: 320 },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 },
   sectionsWrap: { display: "flex", flexDirection: "column", gap: 32 },
   section: { display: "flex", flexDirection: "column", gap: 12 },
-  sectionTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 600, color: "#E8A33D", margin: 0, paddingBottom: 6, borderBottom: "1px solid #22262B" },
+  sectionHeader: { display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1px solid #2E241E" },
+  sectionChip: { width: 14, height: 14, borderRadius: "3px 7px 3px 3px", flexShrink: 0 },
+  sectionTitle: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 19, fontWeight: 600, color: "#F3ECE0", margin: 0 },
   subsection: { display: "flex", flexDirection: "column", gap: 10, marginTop: 4 },
-  subsectionTitle: { fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "#8A8F98", margin: 0, marginLeft: 2 },
-  card: { background: "#14171B", border: "1px solid #22262B", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" },
+  subsectionTitle: { fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "#A89C8E", margin: 0, marginLeft: 2 },
+  card: { background: "#1B1613", border: "1px solid #2E241E", borderRadius: "4px 14px 4px 4px", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" },
   swatch: { aspectRatio: "9 / 16", position: "relative", display: "flex", alignItems: "flex-start", padding: 10, cursor: "pointer", overflow: "hidden" },
-  swatchCategory: { position: "relative", zIndex: 1, background: "rgba(11,13,16,0.55)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, fontFamily: "'Space Grotesk', sans-serif" },
+  swatchCategory: { position: "relative", zIndex: 1, background: "rgba(18,15,13,0.6)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 4, fontFamily: "'Inter', sans-serif" },
   scrubTrack: { position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: "rgba(0,0,0,0.25)" },
   scrub: { height: "100%", background: "#fff" },
   swatchImg: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" },
   playBadge: { position: "absolute", bottom: 8, right: 8, background: "rgba(11,13,16,0.6)", borderRadius: 6, padding: 5, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 },
   expandedMediaWrap: { width: "100%", height: 480, borderRadius: 10, overflow: "hidden", background: "#000" },
   expandedMedia: { width: "100%", borderRadius: 10, display: "block", maxHeight: 320, objectFit: "cover", border: "none" },
-  hint: { fontSize: 11, color: "#5A5F68", margin: "2px 0 0" },
+  hint: { fontSize: 11, color: "#7A6E60", margin: "2px 0 0" },
   cardBody: { padding: 14, display: "flex", flexDirection: "column", gap: 8 },
   dragHandle: { position: "absolute", top: 6, left: 6, zIndex: 2, background: "rgba(11,13,16,0.5)", borderRadius: 5, padding: 3, cursor: "grab" },
-  cardTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.3 },
-  cardDesc: { fontSize: 12.5, color: "#8A8F98", margin: 0, lineHeight: 1.4 },
+  cardTitle: { fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.3 },
+  cardDesc: { fontSize: 12.5, color: "#A89C8E", margin: 0, lineHeight: 1.4 },
   tagRow: { display: "flex", flexWrap: "wrap", gap: 6 },
-  tag: { fontSize: 10.5, color: "#2FA6A0", background: "#2FA6A014", border: "1px solid #2FA6A033", borderRadius: 999, padding: "2px 8px" },
+  tag: { fontSize: 10.5, color: "#C9A227", background: "#C9A22714", border: "1px solid #C9A22733", borderRadius: 999, padding: "2px 8px" },
   promptPreview: { display: "flex", flexDirection: "column", gap: 5 },
-  variantBlock: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
-  variantBlockCompact: { background: "#0F1114", border: "1px solid #1D2126", borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#E8A33D", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
-  copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
-  variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#6B7078", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
+  variantBlock: { background: "#171310", border: "1px solid #26201B", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
+  variantBlockCompact: { background: "#171310", border: "1px solid #26201B", borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#FF5A44", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
+  copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
+  variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#8C8072", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
   cardActions: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
-  copyBtn: { display: "flex", alignItems: "center", gap: 6, background: "#3FAE5C", color: "#0B0D10", border: "none", borderRadius: 7, padding: "7px 11px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", flex: 1, justifyContent: "center" },
-  iconBtn: { background: "transparent", border: "1px solid #22262B", borderRadius: 7, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  copyBtn: { display: "flex", alignItems: "center", gap: 6, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 7, padding: "7px 11px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", flex: 1, justifyContent: "center" },
+  iconBtn: { background: "transparent", border: "1px solid #2E241E", borderRadius: 7, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 },
-  expandedCard: { background: "#14171B", border: "1px solid #22262B", borderRadius: 14, padding: 26, maxWidth: 520, width: "100%", position: "relative", display: "flex", flexDirection: "column", gap: 10, maxHeight: "80vh", overflowY: "auto" },
-  expandedCategory: { fontSize: 12, color: "#E8A33D", fontWeight: 600 },
-  expandedTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, margin: 0 },
-  expandedDesc: { color: "#8A8F98", fontSize: 13.5, margin: 0 },
-  fullPrompt: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5, color: "#D8D4C8", background: "#0F1114", border: "1px solid #1D2126", borderRadius: 8, padding: 14, whiteSpace: "pre-wrap", lineHeight: 1.6, margin: 0 },
+  expandedCard: { background: "#1B1613", border: "1px solid #2E241E", borderRadius: 14, padding: 26, maxWidth: 520, width: "100%", position: "relative", display: "flex", flexDirection: "column", gap: 10, maxHeight: "80vh", overflowY: "auto" },
+  expandedCategory: { fontSize: 12, color: "#FF5A44", fontWeight: 600 },
+  expandedTitle: { fontFamily: "'Fraunces', serif", fontSize: 20, margin: 0 },
+  expandedDesc: { color: "#A89C8E", fontSize: 13.5, margin: 0 },
+  fullPrompt: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5, color: "#D8D4C8", background: "#171310", border: "1px solid #26201B", borderRadius: 8, padding: 14, whiteSpace: "pre-wrap", lineHeight: 1.6, margin: 0 },
   closeBtn: { position: "absolute", top: 16, right: 16, background: "transparent", border: "none", cursor: "pointer" },
-  formCard: { background: "#14171B", border: "1px solid #22262B", borderRadius: 14, padding: 26, maxWidth: 480, width: "100%", display: "flex", flexDirection: "column", gap: 6, maxHeight: "85vh", overflowY: "auto", position: "relative" },
+  formCard: { background: "#1B1613", border: "1px solid #2E241E", borderRadius: 14, padding: 26, maxWidth: 480, width: "100%", display: "flex", flexDirection: "column", gap: 6, maxHeight: "85vh", overflowY: "auto", position: "relative" },
   formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  formTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, margin: 0 },
-  label: { fontSize: 12, color: "#8A8F98", marginTop: 10, marginBottom: 4 },
-  input: { background: "#0F1114", border: "1px solid #22262B", borderRadius: 7, padding: "9px 11px", color: "#EDEAE3", fontSize: 13.5, outline: "none", width: "100%" },
-  textarea: { background: "#0F1114", border: "1px solid #22262B", borderRadius: 7, padding: "9px 11px", color: "#EDEAE3", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "'JetBrains Mono', monospace" },
-  variantFormRow: { display: "flex", flexDirection: "column", gap: 4, marginTop: 8, paddingTop: 8, borderTop: "1px solid #1D2126" },
-  removeVariantBtn: { display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "none", color: "#E8A0A0", fontSize: 11.5, cursor: "pointer", padding: "4px 0", alignSelf: "flex-start" },
-  addVariantBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px dashed #3A3E44", color: "#8A8F98", borderRadius: 7, padding: "8px 12px", fontSize: 13, cursor: "pointer", marginTop: 8 },
-  suggestionsBox: { position: "absolute", top: "100%", left: 0, right: 0, background: "#1A1D22", border: "1px solid #2A2E33", borderRadius: 8, marginTop: 4, zIndex: 10, maxHeight: 180, overflowY: "auto" },
+  formTitle: { fontFamily: "'Fraunces', serif", fontSize: 18, margin: 0 },
+  label: { fontSize: 12, color: "#A89C8E", marginTop: 10, marginBottom: 4 },
+  input: { background: "#171310", border: "1px solid #2E241E", borderRadius: 7, padding: "9px 11px", color: "#F3ECE0", fontSize: 13.5, outline: "none", width: "100%" },
+  textarea: { background: "#171310", border: "1px solid #2E241E", borderRadius: 7, padding: "9px 11px", color: "#F3ECE0", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "'JetBrains Mono', monospace" },
+  variantFormRow: { display: "flex", flexDirection: "column", gap: 4, marginTop: 8, paddingTop: 8, borderTop: "1px solid #26201B" },
+  removeVariantBtn: { display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "none", color: "#E8948C", fontSize: 11.5, cursor: "pointer", padding: "4px 0", alignSelf: "flex-start" },
+  addVariantBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px dashed #3A3E44", color: "#A89C8E", borderRadius: 7, padding: "8px 12px", fontSize: 13, cursor: "pointer", marginTop: 8 },
+  suggestionsBox: { position: "absolute", top: "100%", left: 0, right: 0, background: "#1A1D22", border: "1px solid #362B24", borderRadius: 8, marginTop: 4, zIndex: 10, maxHeight: 180, overflowY: "auto" },
   suggestionItem: { padding: "8px 12px", fontSize: 13, cursor: "pointer", color: "#C8C4B8" },
   formActions: { display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 },
-  cancelBtn: { background: "transparent", border: "1px solid #22262B", color: "#8A8F98", borderRadius: 8, padding: "9px 16px", fontSize: 13.5, cursor: "pointer" },
-  saveBtn: { background: "#E8A33D", color: "#0B0D10", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
+  cancelBtn: { background: "transparent", border: "1px solid #2E241E", color: "#A89C8E", borderRadius: 8, padding: "9px 16px", fontSize: 13.5, cursor: "pointer" },
+  saveBtn: { background: "#FF5A44", color: "#120F0D", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
