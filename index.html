@@ -408,6 +408,25 @@ function App() {
     }
   };
 
+  const handleRenameCategory = async (oldName) => {
+    const input = window.prompt(`Renomear categoria "${oldName}" para:`, oldName);
+    if (!input) return;
+    const newName = input.trim();
+    if (!newName || newName === oldName) return;
+    const prev = prompts;
+    setPrompts(prompts.map((p) => (p.category === oldName ? { ...p, category: newName } : p)));
+    if (activeCategory === oldName) setActiveCategory(newName);
+    try {
+      const { error } = await supabaseClient.from("prompts").update({ category: newName }).eq("category", oldName);
+      if (error) throw error;
+      setSaveError(false);
+    } catch (e) {
+      setPrompts(prev);
+      if (activeCategory === newName) setActiveCategory(oldName);
+      setSaveError(true);
+    }
+  };
+
   const handleDuplicate = async (item) => {
     const sameCategory = prompts.filter((p) => p.category === item.category);
     const maxPos = sameCategory.reduce((max, p) => Math.max(max, p.position ?? 0), -1);
@@ -416,7 +435,10 @@ function App() {
       id: `p-${Date.now()}`,
       title: `${item.title} (cópia)`,
       position: maxPos + 1,
-      promptVariants: (item.promptVariants || []).map((v) => ({ ...v })),
+      prompt: "",
+      promptVariants: (item.promptVariants || []).length
+        ? item.promptVariants.map((v) => ({ label: v.label, text: "" }))
+        : [{ label: "", text: "" }],
     };
     try {
       const row = promptToRow(newItem);
@@ -469,17 +491,27 @@ function App() {
 
       <div style={styles.chipRow}>
         {categories.map((c) => (
-          <button
-            key={c}
-            className="chip"
-            onClick={() => setActiveCategory(c)}
-            style={{
-              ...styles.chip,
-              ...(activeCategory === c ? styles.chipActive : {}),
-            }}
-          >
-            {c}
-          </button>
+          <div key={c} style={styles.chipWrap}>
+            <button
+              className="chip"
+              onClick={() => setActiveCategory(c)}
+              style={{
+                ...styles.chip,
+                ...(activeCategory === c ? styles.chipActive : {}),
+              }}
+            >
+              {c}
+            </button>
+            {c !== "Todos" && (
+              <button
+                style={styles.chipRenameBtn}
+                title="Renomear categoria"
+                onClick={() => handleRenameCategory(c)}
+              >
+                <Icon name="Pencil" size={11} color="#5A5F68" />
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
@@ -773,6 +805,8 @@ const styles = {
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#EDEAE3", fontSize: 14, width: "100%" },
   countText: { fontSize: 12, color: "#5A5F68", whiteSpace: "nowrap" },
   chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 22 },
+  chipWrap: { display: "flex", alignItems: "center", gap: 2 },
+  chipRenameBtn: { background: "transparent", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" },
   chip: { background: "#14171B", border: "1px solid #22262B", color: "#8A8F98", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, cursor: "pointer" },
   chipActive: { borderColor: "#E8A33D", color: "#E8A33D", background: "#E8A33D14" },
   errorBanner: { background: "#3A1F1F", border: "1px solid #5A2E2E", color: "#E8A0A0", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
