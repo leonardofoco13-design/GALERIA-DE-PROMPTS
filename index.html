@@ -500,11 +500,11 @@ function App() {
               : "Nenhum prompt encontrado para essa busca ou categoria."}
           </p>
         </div>
-      ) : activeCategory === "Todos" ? (
+      ) : (
         <div style={styles.sectionsWrap}>
           {groupedByCategory.map((group) => (
             <section key={group.category} style={styles.section}>
-              <h2 style={styles.sectionTitle}>{group.category}</h2>
+              {activeCategory === "Todos" && <h2 style={styles.sectionTitle}>{group.category}</h2>}
               {group.subsections.map((sub, si) => (
                 <div key={sub.subcategory || `__none__-${si}`} style={styles.subsection}>
                   {sub.subcategory && <h3 style={styles.subsectionTitle}>{sub.subcategory}</h3>}
@@ -537,33 +537,6 @@ function App() {
                 </div>
               ))}
             </section>
-          ))}
-        </div>
-      ) : (
-        <div style={styles.grid}>
-          {filtered.map((item) => (
-            <PromptCard
-              key={item.id}
-              item={item}
-              copiedId={copiedId}
-              isDragging={draggedId === item.id}
-              onOpen={() => setExpanded(item)}
-              onCopy={(text, i) => handleCopy(item.id, text, i)}
-              onEdit={() => {
-                setEditing(item);
-                setModalOpen(true);
-              }}
-              onDelete={() => handleDelete(item.id)}
-                    onDuplicate={() => handleDuplicate(item)}
-              onDragStart={() => setDraggedId(item.id)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (draggedId) handleReorder(draggedId, item.id, filtered);
-                setDraggedId(null);
-              }}
-              onDragEnd={() => setDraggedId(null)}
-            />
           ))}
         </div>
       )}
