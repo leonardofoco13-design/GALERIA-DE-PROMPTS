@@ -295,6 +295,7 @@ function App() {
   const [expanded, setExpanded] = useState(null);
   const [saveError, setSaveError] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const handleReorder = async (draggedItemId, targetItemId, listItems) => {
     if (draggedItemId === targetItemId) return;
@@ -517,31 +518,42 @@ function App() {
         </button>
       </div>
 
-      <div style={styles.chipRow}>
-        {categories.map((c) => (
-          <div key={c} style={styles.chipWrap}>
-            <button
-              className="chip"
-              onClick={() => setActiveCategory(c)}
-              style={{
-                ...styles.chip,
-                ...(activeCategory === c ? styles.chipActive : {}),
-              }}
-            >
-              {c}
-            </button>
-            {c !== "Todos" && (
+      <button style={styles.filterToggleBtn} onClick={() => setFilterOpen((v) => !v)}>
+        <Icon name="SlidersHorizontal" size={14} />
+        Filtro: {activeCategory}
+        <Icon name={filterOpen ? "ChevronUp" : "ChevronDown"} size={14} />
+      </button>
+
+      {filterOpen && (
+        <div style={styles.chipRow}>
+          {categories.map((c) => (
+            <div key={c} style={styles.chipWrap}>
               <button
-                style={styles.chipRenameBtn}
-                title="Renomear categoria"
-                onClick={() => handleRenameCategory(c)}
+                className="chip"
+                onClick={() => {
+                  setActiveCategory(c);
+                  setFilterOpen(false);
+                }}
+                style={{
+                  ...styles.chip,
+                  ...(activeCategory === c ? styles.chipActive : {}),
+                }}
               >
-                <Icon name="Pencil" size={11} color="#7D6F5C" />
+                {c}
               </button>
-            )}
-          </div>
-        ))}
-      </div>
+              {c !== "Todos" && (
+                <button
+                  style={styles.chipRenameBtn}
+                  title="Renomear categoria"
+                  onClick={() => handleRenameCategory(c)}
+                >
+                  <Icon name="Pencil" size={11} color="#7D6F5C" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {saveError && (
         <div style={styles.errorBanner}>
@@ -860,6 +872,7 @@ const styles = {
   searchBox: { display: "flex", alignItems: "center", gap: 10, background: "#FFFFFF", border: "1px solid #DED0B8", borderRadius: 8, padding: "12px 16px", flex: "1 1 320px" },
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#2B2621", fontSize: 14, width: "100%" },
   countText: { fontSize: 12, color: "#7D6F5C", whiteSpace: "nowrap" },
+  filterToggleBtn: { display: "flex", alignItems: "center", gap: 8, background: "#FFFFFF", border: "1px solid #DED0B8", color: "#2B2621", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 14 },
   chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 22 },
   chipWrap: { display: "flex", alignItems: "center", gap: 2 },
   chipRenameBtn: { background: "transparent", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" },
