@@ -220,21 +220,20 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
         </div>
         <div style={styles.promptPreview}>
           {(() => {
-            const variantList = item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "Padrão", text: item.prompt }];
-            const isCompact = variantList.length > 1;
+            const variantList = item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "", text: item.prompt }];
+            const showLabels = variantList.length > 1;
             return variantList.map((v, i) => (
-              <div key={i} style={isCompact ? styles.variantBlockCompact : styles.variantBlock}>
-                <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", gap: 2 }}>
-                  {isCompact && <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>}
-                  {!isCompact && <div style={styles.variantText}>{v.text}</div>}
-                </div>
+              <div key={i} style={styles.variantBlockCompact}>
+                {showLabels && (
+                  <span style={styles.variantLabel}>{v.label || `Prompt ${i + 1}`}</span>
+                )}
                 <button
                   className="copybtn"
-                  style={styles.copyBtnSmall}
+                  style={{ ...styles.copyBtnSmall, ...(showLabels ? {} : { flex: 1, justifyContent: "center" }) }}
                   onClick={() => onCopy(v.text, i)}
                 >
                   <Icon name={copiedId === `${item.id}-${i}` ? "Check" : "Copy"} size={12} />
-                  {copiedId === `${item.id}-${i}` ? "Copiado" : "Copiar"}
+                  {copiedId === `${item.id}-${i}` ? "Copiado" : "Copiar prompt"}
                 </button>
               </div>
             ));
@@ -862,16 +861,14 @@ const styles = {
   hint: { fontSize: 11, color: "#7D6F5C", margin: "2px 0 0" },
   cardBody: { padding: 14, display: "flex", flexDirection: "column", gap: 8 },
   dragHandle: { position: "absolute", top: 6, left: 6, zIndex: 2, background: "rgba(11,13,16,0.5)", borderRadius: 5, padding: 3, cursor: "grab" },
-  cardTitle: { fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.3 },
+  cardTitle: { fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.3, overflowWrap: "break-word", wordBreak: "break-word" },
   cardDesc: { fontSize: 12.5, color: "#6B5F50", margin: 0, lineHeight: 1.4 },
   tagRow: { display: "flex", flexWrap: "wrap", gap: 6 },
   tag: { fontSize: 10.5, color: "#C9A227", background: "#C9A22714", border: "1px solid #C9A22733", borderRadius: 999, padding: "2px 8px" },
   promptPreview: { display: "flex", flexDirection: "column", gap: 5 },
-  variantBlock: { background: "#171310", border: "1px solid #26201B", borderRadius: 6, padding: "6px 8px", display: "flex", alignItems: "center", gap: 8 },
   variantBlockCompact: { background: "#171310", border: "1px solid #26201B", borderRadius: 6, padding: "5px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
   variantLabel: { fontSize: 10.5, fontWeight: 600, color: "#2E7D72", textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
-  variantText: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#B0A28C", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   copyBtnSmall: { display: "flex", alignItems: "center", gap: 5, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" },
   cardActions: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
   copyBtn: { display: "flex", alignItems: "center", gap: 6, background: "#3FAE5C", color: "#120F0D", border: "none", borderRadius: 7, padding: "7px 11px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", flex: 1, justifyContent: "center" },
