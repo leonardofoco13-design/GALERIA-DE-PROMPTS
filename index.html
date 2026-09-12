@@ -221,7 +221,7 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
         <div style={styles.promptPreview}>
           {(() => {
             const variantList = item.promptVariants && item.promptVariants.length ? item.promptVariants : [{ label: "", text: item.prompt }];
-            const showLabels = variantList.length > 1;
+            const showLabels = variantList.some((v) => v.label && v.label.trim());
             return variantList.map((v, i) => (
               <div key={i} style={styles.variantBlockCompact}>
                 {showLabels && (
@@ -739,14 +739,12 @@ function PromptForm({ initial, onCancel, onSave }) {
         <label style={styles.label}>Prompts deste card</label>
         {variants.map((v, i) => (
           <div key={i} style={styles.variantFormRow}>
-            {variants.length > 1 && (
-              <input
-                style={{ ...styles.input, marginBottom: 6 }}
-                value={v.label}
-                onChange={(e) => updateVariant(i, "label", e.target.value)}
-                placeholder={`Nome do prompt ${i + 1} (ex: Sem áudio)`}
-              />
-            )}
+            <input
+              style={{ ...styles.input, marginBottom: 6 }}
+              value={v.label}
+              onChange={(e) => updateVariant(i, "label", e.target.value)}
+              placeholder={variants.length > 1 ? `Nome do prompt ${i + 1} (ex: Sem áudio)` : "Nome deste prompt (opcional)"}
+            />
             <textarea
               style={styles.textarea}
               value={v.text}
@@ -884,8 +882,8 @@ const styles = {
   formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   formTitle: { fontFamily: "'Fraunces', serif", fontSize: 18, margin: 0 },
   label: { fontSize: 12, color: "#6B5F50", marginTop: 10, marginBottom: 4 },
-  input: { background: "#171310", border: "1px solid #DED0B8", borderRadius: 7, padding: "9px 11px", color: "#2B2621", fontSize: 13.5, outline: "none", width: "100%" },
-  textarea: { background: "#171310", border: "1px solid #DED0B8", borderRadius: 7, padding: "9px 11px", color: "#2B2621", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "'JetBrains Mono', monospace" },
+  input: { background: "#171310", border: "1px solid #DED0B8", borderRadius: 7, padding: "9px 11px", color: "#F0E8D8", fontSize: 13.5, outline: "none", width: "100%" },
+  textarea: { background: "#171310", border: "1px solid #DED0B8", borderRadius: 7, padding: "9px 11px", color: "#F0E8D8", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "'JetBrains Mono', monospace" },
   variantFormRow: { display: "flex", flexDirection: "column", gap: 4, marginTop: 8, paddingTop: 8, borderTop: "1px solid #26201B" },
   removeVariantBtn: { display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "none", color: "#E8948C", fontSize: 11.5, cursor: "pointer", padding: "4px 0", alignSelf: "flex-start" },
   addVariantBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px dashed #3A3E44", color: "#6B5F50", borderRadius: 7, padding: "8px 12px", fontSize: 13, cursor: "pointer", marginTop: 8 },
