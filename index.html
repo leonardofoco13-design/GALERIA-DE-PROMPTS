@@ -284,7 +284,67 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
   );
 }
 
+function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+    } catch (err) {
+      setError("E-mail ou senha incorretos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={styles.authWrap}>
+      <form style={styles.loginCard} onSubmit={handleSubmit}>
+        <div style={styles.logoMark}>
+          <span style={styles.logoMonogram}>LG</span>
+        </div>
+        <h1 style={styles.loginTitle}>Galeria de Prompts</h1>
+        <p style={styles.loginSub}>Área privada — faça login para continuar</p>
+
+        <label style={styles.label}>E-mail</label>
+        <input
+          style={styles.input}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="seu@email.com"
+          required
+        />
+
+        <label style={styles.label}>Senha</label>
+        <input
+          style={styles.input}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Sua senha"
+          required
+        />
+
+        {error && <p style={styles.loginError}>{error}</p>}
+
+        <button style={styles.loginBtn} type="submit" disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function App() {
+  const [session, setSession] = useState(undefined);
   const [prompts, setPrompts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -296,6 +356,18 @@ function App() {
   const [saveError, setSaveError] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  useEffect(() => {
+    supabaseClient.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabaseClient.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabaseClient.auth.signOut();
+  };
 
   const handleReorder = async (draggedItemId, targetItemId, listItems) => {
     if (draggedItemId === targetItemId) return;
@@ -320,6 +392,7 @@ function App() {
   };
 
   useEffect(() => {
+    if (!session) return;
     (async () => {
       try {
         const { data, error } = await supabaseClient
@@ -334,7 +407,7 @@ function App() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [session]);
 
   const categories = useMemo(() => {
     const set = new Set(prompts.map((p) => p.category).filter(Boolean));
@@ -482,6 +555,18 @@ function App() {
     }
   };
 
+  if (session === undefined) {
+    return (
+      <div style={styles.authWrap}>
+        <p style={{ color: "#7D6F5C", fontFamily: "'Inter', sans-serif" }}>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginScreen />;
+  }
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -494,6 +579,10 @@ function App() {
             <p style={styles.sub}>por Leo Gomes · Biblioteca visual para o Flow (Veo 3)</p>
           </div>
         </div>
+        <button style={styles.logoutBtn} onClick={handleLogout}>
+          <Icon name="LogOut" size={14} /> Sair
+        </button>
+      </header>
       </header>
 
       <div style={styles.searchRow}>
@@ -855,6 +944,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
     marginBottom: 34,
     marginLeft: "calc(-50vw + 50%)",
     marginRight: "calc(-50vw + 50%)",
@@ -862,6 +952,13 @@ const styles = {
     padding: "44px 28px 36px",
     background: "#171310",
   },
+  logoutBtn: { position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "1px solid #3A3025", color: "#B0A28C", borderRadius: 7, padding: "7px 12px", fontSize: 12.5, cursor: "pointer" },
+  authWrap: { minHeight: "100vh", background: "#F2ECDE", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
+  loginCard: { background: "#FFFFFF", border: "1px solid #DED0B8", borderRadius: 10, padding: "36px 32px", maxWidth: 380, width: "100%", display: "flex", flexDirection: "column", gap: 4, alignItems: "center", boxShadow: "0 12px 30px -14px rgba(0,0,0,0.25)" },
+  loginTitle: { fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, margin: "16px 0 0", color: "#2B2621", textAlign: "center" },
+  loginSub: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 13, color: "#6B5F50", margin: "4px 0 20px", textAlign: "center" },
+  loginError: { color: "#A33B2E", fontSize: 12.5, margin: "4px 0 0" },
+  loginBtn: { width: "100%", background: "#2E7D72", color: "#F2ECDE", border: "none", borderRadius: 7, padding: "11px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 16 },
   headerLeft: { display: "flex", alignItems: "center", gap: 14, textAlign: "left" },
   logoMark: { width: 40, height: 40, borderRadius: "4px 12px 4px 4px", background: "#2E7D72", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoMonogram: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 17, color: "#120F0D" },
