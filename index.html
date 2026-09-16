@@ -98,6 +98,7 @@ function rowToPrompt(row) {
     videoUrl: row.video_url || "",
     thumbnailUrl: row.thumbnail_url || "",
     position: row.position ?? 0,
+    status: row.status || "published",
   };
 }
 
@@ -119,6 +120,7 @@ function promptToRow(item) {
     video_url: item.videoUrl || "",
     thumbnail_url: item.thumbnailUrl || "",
     position: item.position ?? 0,
+    status: item.status || "draft",
   };
 }
 
@@ -161,7 +163,7 @@ function toDirectImageUrl(url) {
   return url;
 }
 
-function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplicate, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
+function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplicate, onPublish, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
   const [c1, c2] = themeFor(item.category || item.title);
   const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
   const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
@@ -269,6 +271,11 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
           })()}
         </div>
         <div style={styles.cardActions}>
+          {item.status === "draft" && (
+            <button style={styles.publishBtn} onClick={onPublish}>
+              <Icon name="Rocket" size={13} /> Publicar
+            </button>
+          )}
           <button style={styles.iconBtn} onClick={onEdit}>
             <Icon name="Pencil" size={14} color="#6B5F50" />
           </button>
@@ -356,6 +363,20 @@ function App() {
   const [saveError, setSaveError] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [testMode, setTestMode] = useState(false);
+
+  const handlePublish = async (item) => {
+    const prev = prompts;
+    setPrompts(prompts.map((p) => (p.id === item.id ? { ...p, status: "published" } : p)));
+    try {
+      const { error } = await supabaseClient.from("prompts").update({ status: "published" }).eq("id", item.id);
+      if (error) throw error;
+      setSaveError(false);
+    } catch (e) {
+      setPrompts(prev);
+      setSaveError(true);
+    }
+  };
 
   useEffect(() => {
     supabaseClient.auth.getSession().then(({ data }) => setSession(data.session));
@@ -415,6 +436,12 @@ function App() {
           .order("position", { ascending: true, nullsFirst: false });
         if (error) throw error;
         setPrompts((data || []).map(rowToPrompt));
+
+        const { data: catData } = await supabaseClient
+          .from("category_positions")
+          .select("*")
+          .order("position", { ascending: true });
+        setCategoryOrder((catData || []).map((c) => c.category));
       } catch (e) {
         setSaveError(true);
       } finally {
@@ -423,13 +450,19 @@ function App() {
     })();
   }, [session]);
 
+  const [categoryOrder, setCategoryOrder] = useState([]);
+
   const categories = useMemo(() => {
     const set = new Set(prompts.map((p) => p.category).filter(Boolean));
-    return ["Todos", ...Array.from(set).sort()];
-  }, [prompts]);
+    const all = Array.from(set);
+    const ordered = categoryOrder.filter((c) => all.includes(c));
+    const remaining = all.filter((c) => !ordered.includes(c)).sort();
+    return ["Todos", ...ordered, ...remaining];
+  }, [prompts, categoryOrder]);
 
   const filtered = useMemo(() => {
     return prompts.filter((p) => {
+      const matchesStatus = testMode ? p.status === "draft" : p.status === "published";
       const matchesCat = activeCategory === "Todos" || p.category === activeCategory;
       const q = search.trim().toLowerCase();
       const matchesSearch =
@@ -439,9 +472,11 @@ function App() {
         (p.subcategory || "").toLowerCase().includes(q) ||
         (p.promptVariants || []).some((v) => v.text.toLowerCase().includes(q)) ||
         (p.tags || []).some((t) => t.toLowerCase().includes(q));
-      return matchesCat && matchesSearch;
+      return matchesStatus && matchesCat && matchesSearch;
     });
-  }, [prompts, activeCategory, search]);
+  }, [prompts, activeCategory, search, testMode]);
+
+  const draftCount = useMemo(() => prompts.filter((p) => p.status === "draft").length, [prompts]);
 
   const groupedByCategory = useMemo(() => {
     const order = categories.filter((c) => c !== "Todos");
@@ -510,7 +545,7 @@ function App() {
       } else {
         const sameCategory = prompts.filter((p) => p.category === item.category);
         const maxPos = sameCategory.reduce((max, p) => Math.max(max, p.position ?? 0), -1);
-        const newItem = { ...item, id: `p-${Date.now()}`, position: maxPos + 1 };
+        const newItem = { ...item, id: `p-${Date.now()}`, position: maxPos + 1, status: "draft" };
         const row = promptToRow(newItem);
         const { error } = await supabaseClient.from("prompts").insert(row);
         if (error) throw error;
@@ -543,6 +578,29 @@ function App() {
     }
   };
 
+  const [draggedCategory, setDraggedCategory] = useState(null);
+
+  const handleReorderCategory = async (draggedCat, targetCat) => {
+    if (draggedCat === targetCat) return;
+    const currentOrder = categories.filter((c) => c !== "Todos");
+    const items = [...currentOrder];
+    const fromIndex = items.indexOf(draggedCat);
+    const toIndex = items.indexOf(targetCat);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const [moved] = items.splice(fromIndex, 1);
+    items.splice(toIndex, 0, moved);
+    setCategoryOrder(items);
+    try {
+      await Promise.all(
+        items.map((cat, i) =>
+          supabaseClient.from("category_positions").upsert({ category: cat, position: i })
+        )
+      );
+    } catch (e) {
+      setSaveError(true);
+    }
+  };
+
   const handleDuplicate = async (item) => {
     const sameCategory = prompts.filter((p) => p.category === item.category);
     const maxPos = sameCategory.reduce((max, p) => Math.max(max, p.position ?? 0), -1);
@@ -551,6 +609,7 @@ function App() {
       id: `p-${Date.now()}`,
       title: `${item.title} (cópia)`,
       position: maxPos + 1,
+      status: "draft",
       prompt: "",
       promptVariants: (item.promptVariants || []).length
         ? item.promptVariants.map((v) => ({ label: v.label, text: "" }))
@@ -613,7 +672,14 @@ function App() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <span style={styles.countText}>{filtered.length} de {prompts.length}</span>
+        <span style={styles.countText}>{filtered.length} {testMode ? "rascunhos" : "publicados"}</span>
+        <button
+          style={{ ...styles.testModeBtn, ...(testMode ? styles.testModeBtnActive : {}) }}
+          onClick={() => setTestMode((v) => !v)}
+        >
+          <Icon name="FlaskConical" size={15} />
+          {testMode ? "Ver galeria publicada" : `Área de teste (${draftCount})`}
+        </button>
         <button
           style={styles.addBtn}
           onClick={() => {
@@ -682,9 +748,26 @@ function App() {
       ) : (
         <div style={styles.sectionsWrap}>
           {groupedByCategory.map((group) => (
-            <section key={group.category} style={styles.section}>
+            <section
+              key={group.category}
+              style={{
+                ...styles.section,
+                opacity: draggedCategory === group.category ? 0.4 : 1,
+              }}
+              draggable={activeCategory === "Todos"}
+              onDragStart={() => setDraggedCategory(group.category)}
+              onDragOver={(e) => activeCategory === "Todos" && e.preventDefault()}
+              onDrop={(e) => {
+                if (activeCategory !== "Todos") return;
+                e.preventDefault();
+                if (draggedCategory) handleReorderCategory(draggedCategory, group.category);
+                setDraggedCategory(null);
+              }}
+              onDragEnd={() => setDraggedCategory(null)}
+            >
               {activeCategory === "Todos" && (
                 <div style={styles.sectionHeader}>
+                  <Icon name="GripVertical" size={14} color="#7D6F5C" />
                   <span
                     style={{
                       ...styles.sectionChip,
@@ -712,6 +795,7 @@ function App() {
                         }}
                         onDelete={() => handleDelete(item.id)}
                         onDuplicate={() => handleDuplicate(item)}
+                        onPublish={() => handlePublish(item)}
                         onDragStart={() => setDraggedId(item.id)}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
@@ -984,6 +1068,9 @@ const styles = {
   h1: { fontFamily: "'Fraunces', serif", fontSize: 38, fontWeight: 600, margin: 0, letterSpacing: "-0.015em", lineHeight: 1.05, color: "#F5EFE3", textAlign: "center" },
   sub: { margin: "8px 0 0", fontSize: 13.5, color: "#B0A28C", fontStyle: "italic", fontFamily: "'Fraunces', serif", textAlign: "center" },
   addBtn: { display: "flex", alignItems: "center", gap: 6, background: "#2E7D72", color: "#120F0D", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', sans-serif" },
+  testModeBtn: { display: "flex", alignItems: "center", gap: 6, background: "#FFFFFF", border: "1px solid #DED0B8", color: "#6B5F50", borderRadius: 6, padding: "10px 14px", fontWeight: 600, fontSize: 13, cursor: "pointer" },
+  testModeBtnActive: { background: "#5B4A8A", color: "#F3ECE0", borderColor: "#5B4A8A" },
+  publishBtn: { display: "flex", alignItems: "center", gap: 5, background: "#5B4A8A", color: "#F3ECE0", border: "none", borderRadius: 7, padding: "0 10px", height: 36, fontSize: 12, fontWeight: 600, cursor: "pointer" },
   searchRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 20, marginTop: 28, flexWrap: "wrap" },
   searchBox: { display: "flex", alignItems: "center", gap: 10, background: "#FFFFFF", border: "1px solid #DED0B8", borderRadius: 8, padding: "12px 16px", flex: "1 1 320px" },
   searchInput: { background: "transparent", border: "none", outline: "none", color: "#2B2621", fontSize: 14, width: "100%" },
@@ -1004,7 +1091,7 @@ const styles = {
   sectionChip: { width: 14, height: 14, borderRadius: "3px 7px 3px 3px", flexShrink: 0 },
   sectionTitle: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 23, fontWeight: 600, color: "#2B2621", margin: 0 },
   subsection: { display: "flex", flexDirection: "column", gap: 10, marginTop: 4 },
-  subsectionTitle: { fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "#6B5F50", margin: 0, marginLeft: 2 },
+  subsectionTitle: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 16, fontWeight: 500, color: "#6B5F50", margin: 0, textAlign: "center" },
   card: { background: "#FFFFFF", border: "1px solid #DED0B8", borderRadius: "4px 14px 4px 4px", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative", boxShadow: "0 8px 20px -12px rgba(0,0,0,0.55)" },
   swatch: { aspectRatio: "9 / 16", position: "relative", display: "flex", alignItems: "flex-start", padding: 10, cursor: "pointer", overflow: "hidden" },
   swatchCategory: { position: "relative", zIndex: 1, background: "rgba(18,15,13,0.6)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 4, fontFamily: "'Inter', sans-serif" },
