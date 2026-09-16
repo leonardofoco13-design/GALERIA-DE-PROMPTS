@@ -295,7 +295,7 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
   );
 }
 
-function LoginScreen() {
+function LoginScreen({ onShowPlans }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -349,12 +349,16 @@ function LoginScreen() {
         <button style={styles.loginBtn} type="submit" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </button>
+
+        <button type="button" style={styles.linkBtn} onClick={onShowPlans}>
+          Ainda não é cliente? Ver planos
+        </button>
       </form>
     </div>
   );
 }
 
-function PricingScreen({ onBuy, onLogout }) {
+function PricingScreen({ onBuy, onBack, backLabel }) {
   const plans = [
     { label: "Diário", price: "R$ 1,99", period: "por dia", priceId: "price_1UFhqcHXS8NSBpmX2LAXXhM7" },
     { label: "Semanal", price: "R$ 10,99", period: "por semana", priceId: "price_1UFhqBHXS8NSBpmX9JYXUoRr", highlight: true },
@@ -380,7 +384,7 @@ function PricingScreen({ onBuy, onLogout }) {
             </div>
           ))}
         </div>
-        <button style={styles.linkBtn} onClick={onLogout}>Sair</button>
+        <button style={styles.linkBtn} onClick={onBack}>{backLabel}</button>
       </div>
     </div>
   );
@@ -400,6 +404,7 @@ function App() {
   const [saveError, setSaveError] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [authView, setAuthView] = useState("login");
   const [testMode, setTestMode] = useState(false);
 
   const handlePublish = async (item) => {
@@ -715,7 +720,16 @@ function App() {
   }
 
   if (!session) {
-    return <LoginScreen />;
+    if (authView === "plans") {
+      return (
+        <PricingScreen
+          onBuy={handleBuy}
+          onBack={() => setAuthView("login")}
+          backLabel="← Voltar para o login"
+        />
+      );
+    }
+    return <LoginScreen onShowPlans={() => setAuthView("plans")} />;
   }
 
   if (profile === undefined) {
@@ -727,7 +741,7 @@ function App() {
   }
 
   if (!hasValidAccess) {
-    return <PricingScreen onBuy={handleBuy} onLogout={handleLogout} />;
+    return <PricingScreen onBuy={handleBuy} onBack={handleLogout} backLabel="Sair" />;
   }
 
   return (
