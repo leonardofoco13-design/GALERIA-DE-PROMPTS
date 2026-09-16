@@ -163,7 +163,7 @@ function toDirectImageUrl(url) {
   return url;
 }
 
-function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplicate, onPublish, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
+function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplicate, onPublish, onDragStart, onDragOver, onDrop, onDragEnd, isDragging, isAdmin }) {
   const [c1, c2] = themeFor(item.category || item.title);
   const hasDirectVideo = isDirectVideoUrl(item.videoUrl);
   const autoplayEmbed = toAutoplayEmbedUrl(item.videoUrl);
@@ -191,16 +191,18 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
   return (
     <div
       className="card"
-      style={{ ...styles.card, opacity: isDragging ? 0.4 : 1, cursor: "grab" }}
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      style={{ ...styles.card, opacity: isDragging ? 0.4 : 1, cursor: isAdmin ? "grab" : "default" }}
+      draggable={isAdmin}
+      onDragStart={isAdmin ? onDragStart : undefined}
+      onDragOver={isAdmin ? onDragOver : undefined}
+      onDrop={isAdmin ? onDrop : undefined}
+      onDragEnd={isAdmin ? onDragEnd : undefined}
     >
-      <div style={styles.dragHandle}>
-        <Icon name="GripVertical" size={14} color="#7D6F5C" />
-      </div>
+      {isAdmin && (
+        <div style={styles.dragHandle}>
+          <Icon name="GripVertical" size={14} color="#7D6F5C" />
+        </div>
+      )}
       <div
         ref={swatchRef}
         style={{
@@ -270,22 +272,24 @@ function PromptCard({ item, copiedId, onOpen, onCopy, onEdit, onDelete, onDuplic
             ));
           })()}
         </div>
-        <div style={styles.cardActions}>
-          {item.status === "draft" && (
-            <button style={styles.publishBtn} onClick={onPublish}>
-              <Icon name="Rocket" size={13} /> Publicar
+        {isAdmin && (
+          <div style={styles.cardActions}>
+            {item.status === "draft" && (
+              <button style={styles.publishBtn} onClick={onPublish}>
+                <Icon name="Rocket" size={13} /> Publicar
+              </button>
+            )}
+            <button style={styles.iconBtn} onClick={onEdit}>
+              <Icon name="Pencil" size={14} color="#6B5F50" />
             </button>
-          )}
-          <button style={styles.iconBtn} onClick={onEdit}>
-            <Icon name="Pencil" size={14} color="#6B5F50" />
-          </button>
-          <button style={styles.iconBtn} onClick={onDuplicate}>
-            <Icon name="Copy" size={14} color="#6B5F50" />
-          </button>
-          <button style={styles.iconBtn} onClick={onDelete}>
-            <Icon name="Trash2" size={14} color="#6B5F50" />
-          </button>
-        </div>
+            <button style={styles.iconBtn} onClick={onDuplicate}>
+              <Icon name="Copy" size={14} color="#6B5F50" />
+            </button>
+            <button style={styles.iconBtn} onClick={onDelete}>
+              <Icon name="Trash2" size={14} color="#6B5F50" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -350,8 +354,41 @@ function LoginScreen() {
   );
 }
 
+function PricingScreen({ onBuy, onLogout }) {
+  const plans = [
+    { label: "Diário", price: "R$ 1,99", period: "por dia", priceId: "price_1UFhqcHXS8NSBpmX2LAXXhM7" },
+    { label: "Semanal", price: "R$ 10,99", period: "por semana", priceId: "price_1UFhqBHXS8NSBpmX9JYXUoRr", highlight: true },
+    { label: "Mensal", price: "R$ 35,99", period: "por mês", priceId: "price_1UFhk1HXS8NSBpmXI3rOgAzf" },
+  ];
+  return (
+    <div style={styles.authWrap}>
+      <div style={styles.pricingCard}>
+        <div style={styles.logoMark}>
+          <span style={styles.logoMonogram}>LG</span>
+        </div>
+        <h1 style={styles.loginTitle}>Galeria de Prompts</h1>
+        <p style={styles.loginSub}>Escolha um plano pra desbloquear o acesso</p>
+        <div style={styles.plansRow}>
+          {plans.map((plan) => (
+            <div key={plan.priceId} style={{ ...styles.planCard, ...(plan.highlight ? styles.planCardHighlight : {}) }}>
+              <span style={styles.planLabel}>{plan.label}</span>
+              <span style={styles.planPrice}>{plan.price}</span>
+              <span style={styles.planPeriod}>{plan.period}</span>
+              <button style={styles.planBtn} onClick={() => onBuy(plan.priceId)}>
+                Assinar
+              </button>
+            </div>
+          ))}
+        </div>
+        <button style={styles.linkBtn} onClick={onLogout}>Sair</button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [session, setSession] = useState(undefined);
+  const [profile, setProfile] = useState(undefined);
   const [prompts, setPrompts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -385,6 +422,43 @@ function App() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setProfile(session === null ? null : undefined);
+      return;
+    }
+    (async () => {
+      try {
+        const { data, error } = await supabaseClient
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        if (error) throw error;
+        setProfile(data || null);
+      } catch (e) {
+        setProfile(null);
+      }
+    })();
+  }, [session]);
+
+  const isAdmin = profile?.role === "admin";
+  const hasValidAccess =
+    isAdmin || (profile?.expires_at && new Date(profile.expires_at) > new Date());
+
+  const handleBuy = async (priceId) => {
+    try {
+      const { data, error } = await supabaseClient.functions.invoke("create-checkout-session", {
+        body: { priceId, email: session?.user?.email },
+      });
+      if (error) throw error;
+      if (data?.url) window.location.href = data.url;
+      else throw new Error("Link de pagamento não retornado");
+    } catch (e) {
+      alert("Não foi possível iniciar o pagamento agora. Tente novamente em instantes.");
+    }
+  };
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
@@ -427,7 +501,11 @@ function App() {
   };
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || profile === undefined) return;
+    if (!hasValidAccess) {
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const { data, error } = await supabaseClient
@@ -448,7 +526,7 @@ function App() {
         setLoading(false);
       }
     })();
-  }, [session]);
+  }, [session, profile]);
 
   const [categoryOrder, setCategoryOrder] = useState([]);
 
@@ -640,6 +718,18 @@ function App() {
     return <LoginScreen />;
   }
 
+  if (profile === undefined) {
+    return (
+      <div style={styles.authWrap}>
+        <p style={{ color: "#7D6F5C", fontFamily: "'Inter', sans-serif" }}>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!hasValidAccess) {
+    return <PricingScreen onBuy={handleBuy} onLogout={handleLogout} />;
+  }
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -653,9 +743,11 @@ function App() {
           </div>
         </div>
         <div style={styles.headerActions}>
-          <button style={styles.logoutBtn} onClick={handleExport}>
-            <Icon name="Download" size={14} /> Exportar backup
-          </button>
+          {isAdmin && (
+            <button style={styles.logoutBtn} onClick={handleExport}>
+              <Icon name="Download" size={14} /> Exportar backup
+            </button>
+          )}
           <button style={styles.logoutBtn} onClick={handleLogout}>
             <Icon name="LogOut" size={14} /> Sair
           </button>
@@ -673,22 +765,26 @@ function App() {
           />
         </div>
         <span style={styles.countText}>{filtered.length} {testMode ? "rascunhos" : "publicados"}</span>
-        <button
-          style={{ ...styles.testModeBtn, ...(testMode ? styles.testModeBtnActive : {}) }}
-          onClick={() => setTestMode((v) => !v)}
-        >
-          <Icon name="FlaskConical" size={15} />
-          {testMode ? "Ver galeria publicada" : `Área de teste (${draftCount})`}
-        </button>
-        <button
-          style={styles.addBtn}
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
-        >
-          <Icon name="Plus" size={16} /> Novo prompt
-        </button>
+        {isAdmin && (
+          <button
+            style={{ ...styles.testModeBtn, ...(testMode ? styles.testModeBtnActive : {}) }}
+            onClick={() => setTestMode((v) => !v)}
+          >
+            <Icon name="FlaskConical" size={15} />
+            {testMode ? "Ver galeria publicada" : `Área de teste (${draftCount})`}
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            style={styles.addBtn}
+            onClick={() => {
+              setEditing(null);
+              setModalOpen(true);
+            }}
+          >
+            <Icon name="Plus" size={16} /> Novo prompt
+          </button>
+        )}
       </div>
 
       <button style={styles.filterToggleBtn} onClick={() => setFilterOpen((v) => !v)}>
@@ -714,7 +810,7 @@ function App() {
               >
                 {c}
               </button>
-              {c !== "Todos" && (
+              {isAdmin && c !== "Todos" && (
                 <button
                   style={styles.chipRenameBtn}
                   title="Renomear categoria"
@@ -754,11 +850,11 @@ function App() {
                 ...styles.section,
                 opacity: draggedCategory === group.category ? 0.4 : 1,
               }}
-              draggable={activeCategory === "Todos"}
+              draggable={isAdmin && activeCategory === "Todos"}
               onDragStart={() => setDraggedCategory(group.category)}
-              onDragOver={(e) => activeCategory === "Todos" && e.preventDefault()}
+              onDragOver={(e) => isAdmin && activeCategory === "Todos" && e.preventDefault()}
               onDrop={(e) => {
-                if (activeCategory !== "Todos") return;
+                if (!isAdmin || activeCategory !== "Todos") return;
                 e.preventDefault();
                 if (draggedCategory) handleReorderCategory(draggedCategory, group.category);
                 setDraggedCategory(null);
@@ -767,7 +863,7 @@ function App() {
             >
               {activeCategory === "Todos" && (
                 <div style={styles.sectionHeader}>
-                  <Icon name="GripVertical" size={14} color="#7D6F5C" />
+                  {isAdmin && <Icon name="GripVertical" size={14} color="#7D6F5C" />}
                   <span
                     style={{
                       ...styles.sectionChip,
@@ -787,6 +883,7 @@ function App() {
                         item={item}
                         copiedId={copiedId}
                         isDragging={draggedId === item.id}
+                        isAdmin={isAdmin}
                         onOpen={() => setExpanded(item)}
                         onCopy={(text, i) => handleCopy(item.id, text, i)}
                         onEdit={() => {
@@ -1062,6 +1159,15 @@ const styles = {
   loginSub: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 13, color: "#6B5F50", margin: "4px 0 20px", textAlign: "center" },
   loginError: { color: "#A33B2E", fontSize: 12.5, margin: "4px 0 0" },
   loginBtn: { width: "100%", background: "#2E7D72", color: "#F2ECDE", border: "none", borderRadius: 7, padding: "11px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 16 },
+  pricingCard: { background: "#FFFFFF", border: "1px solid #DED0B8", borderRadius: 10, padding: "36px 32px", maxWidth: 640, width: "100%", display: "flex", flexDirection: "column", gap: 4, alignItems: "center", boxShadow: "0 12px 30px -14px rgba(0,0,0,0.25)" },
+  plansRow: { display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center", marginTop: 24, width: "100%" },
+  planCard: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "#F8F4EA", border: "1px solid #DED0B8", borderRadius: 8, padding: "20px 18px", flex: "1 1 150px", minWidth: 140 },
+  planCardHighlight: { borderColor: "#2E7D72", borderWidth: 2, background: "#F0F7F5" },
+  planLabel: { fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, color: "#2B2621" },
+  planPrice: { fontSize: 22, fontWeight: 700, color: "#2B2621", marginTop: 6 },
+  planPeriod: { fontSize: 12, color: "#7D6F5C", marginBottom: 10 },
+  planBtn: { width: "100%", background: "#2E7D72", color: "#F2ECDE", border: "none", borderRadius: 7, padding: "9px 12px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
+  linkBtn: { background: "transparent", border: "none", color: "#7D6F5C", fontSize: 12.5, cursor: "pointer", marginTop: 24, textDecoration: "underline" },
   headerLeft: { display: "flex", alignItems: "center", gap: 14, textAlign: "left" },
   logoMark: { width: 40, height: 40, borderRadius: "4px 12px 4px 4px", background: "#2E7D72", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoMonogram: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 17, color: "#120F0D" },
