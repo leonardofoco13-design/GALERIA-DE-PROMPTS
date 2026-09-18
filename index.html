@@ -367,12 +367,28 @@ function LoginScreen({ onShowPlans, checkoutStatus }) {
   );
 }
 
-function PricingScreen({ onBuy, onBack, backLabel }) {
+function PricingScreen({ onBuy, onBack, backLabel, defaultEmail }) {
   const plans = [
-    { label: "Diário", price: "R$ 1,99", period: "por dia", priceId: "price_1UGiXXQa60wZjKYQtSenad9q" },
-    { label: "Semanal", price: "R$ 10,99", period: "por semana", priceId: "price_1UGiXZQa60wZjKYQhyim7kA5", highlight: true },
-    { label: "Mensal", price: "R$ 35,99", period: "por mês", priceId: "price_1UGiXZQa60wZjKYQCWYFB06U" },
+    { label: "Diário", price: "R$ 0,99", period: "por dia", priceId: "price_1UGzoKQa60wZjKYQZ6V1SEvc" },
+    { label: "Semanal", price: "R$ 5,99", period: "por semana", priceId: "price_1UGzpMQa60wZjKYQ132CuczS", highlight: true },
+    { label: "Mensal", price: "R$ 21,99", period: "por mês", priceId: "price_1UGzqMQa60wZjKYQ8PYIEUvq" },
   ];
+  const [step, setStep] = useState(defaultEmail ? "confirm" : "email");
+  const [email, setEmail] = useState(defaultEmail || "");
+  const [emailError, setEmailError] = useState("");
+
+  const handleEmailSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailError("Digite um e-mail válido.");
+      return;
+    }
+    setEmail(trimmed);
+    setEmailError("");
+    setStep("confirm");
+  };
+
   return (
     <div style={styles.authWrap}>
       <div style={styles.pricingCard}>
@@ -380,20 +396,55 @@ function PricingScreen({ onBuy, onBack, backLabel }) {
           <span style={styles.logoMonogram}>LG</span>
         </div>
         <h1 style={styles.loginTitle}>Galeria de Prompts</h1>
-        <p style={styles.loginSub}>Escolha um plano pra desbloquear o acesso</p>
-        <div style={styles.plansRow}>
-          {plans.map((plan) => (
-            <div key={plan.priceId} style={{ ...styles.planCard, ...(plan.highlight ? styles.planCardHighlight : {}) }}>
-              <span style={styles.planLabel}>{plan.label}</span>
-              <span style={styles.planPrice}>{plan.price}</span>
-              <span style={styles.planPeriod}>{plan.period}</span>
-              <button style={styles.planBtn} onClick={() => onBuy(plan.priceId)}>
-                Assinar
-              </button>
+
+        {step === "email" && (
+          <React.Fragment>
+            <p style={styles.loginSub}>Digite seu e-mail para continuar</p>
+            <form style={styles.emailStepForm} onSubmit={handleEmailSubmit}>
+              <input
+                style={styles.input}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                required
+              />
+              {emailError && <p style={styles.loginError}>{emailError}</p>}
+              <button style={styles.loginBtn} type="submit">Continuar</button>
+            </form>
+            <button style={styles.linkBtn} onClick={onBack}>{backLabel}</button>
+          </React.Fragment>
+        )}
+
+        {step === "confirm" && (
+          <React.Fragment>
+            <p style={styles.loginSub}>É neste e-mail que você vai receber o acesso. Confirma que está correto?</p>
+            <p style={styles.emailConfirmText}>{email}</p>
+            <div style={styles.emailConfirmRow}>
+              <button style={styles.editEmailBtn} onClick={() => setStep("email")}>Editar e-mail</button>
+              <button style={{ ...styles.loginBtn, width: "auto", flex: 1, marginTop: 0 }} onClick={() => setStep("plans")}>Sim, está correto</button>
             </div>
-          ))}
-        </div>
-        <button style={styles.linkBtn} onClick={onBack}>{backLabel}</button>
+          </React.Fragment>
+        )}
+
+        {step === "plans" && (
+          <React.Fragment>
+            <p style={styles.loginSub}>Escolha um plano pra desbloquear o acesso</p>
+            <div style={styles.plansRow}>
+              {plans.map((plan) => (
+                <div key={plan.priceId} style={{ ...styles.planCard, ...(plan.highlight ? styles.planCardHighlight : {}) }}>
+                  <span style={styles.planLabel}>{plan.label}</span>
+                  <span style={styles.planPrice}>{plan.price}</span>
+                  <span style={styles.planPeriod}>{plan.period}</span>
+                  <button style={styles.planBtn} onClick={() => onBuy(plan.priceId, email)}>
+                    Assinar
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button style={styles.linkBtn} onClick={() => setStep("confirm")}>← Trocar e-mail</button>
+          </React.Fragment>
+        )}
       </div>
     </div>
   );
@@ -465,10 +516,10 @@ function App() {
   const hasValidAccess =
     isAdmin || (profile?.expires_at && new Date(profile.expires_at) > new Date());
 
-  const handleBuy = async (priceId) => {
+  const handleBuy = async (priceId, buyerEmail) => {
     try {
       const { data, error } = await supabaseClient.functions.invoke("create-checkout-session", {
-        body: { priceId, email: session?.user?.email },
+        body: { priceId, email: buyerEmail || session?.user?.email },
       });
       if (error) throw error;
       if (data?.url) window.location.href = data.url;
@@ -754,7 +805,7 @@ function App() {
   }
 
   if (!hasValidAccess) {
-    return <PricingScreen onBuy={handleBuy} onBack={handleLogout} backLabel="Sair" />;
+    return <PricingScreen onBuy={handleBuy} onBack={handleLogout} backLabel="Sair" defaultEmail={session?.user?.email} />;
   }
 
   return (
@@ -1197,6 +1248,10 @@ const styles = {
   planPeriod: { fontSize: 12, color: "#7D6F5C", marginBottom: 10 },
   planBtn: { width: "100%", background: "#2E7D72", color: "#F2ECDE", border: "none", borderRadius: 7, padding: "9px 12px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
   linkBtn: { background: "transparent", border: "none", color: "#7D6F5C", fontSize: 12.5, cursor: "pointer", marginTop: 24, textDecoration: "underline" },
+  emailStepForm: { width: "100%", display: "flex", flexDirection: "column", gap: 4, marginTop: 20 },
+  emailConfirmText: { fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600, color: "#2B2621", background: "#F8F4EA", border: "1px solid #DED0B8", borderRadius: 7, padding: "10px 16px", margin: "16px 0 0", wordBreak: "break-all", textAlign: "center" },
+  emailConfirmRow: { display: "flex", gap: 10, width: "100%", marginTop: 20 },
+  editEmailBtn: { flex: 1, background: "#FFFFFF", border: "1px solid #DED0B8", color: "#6B5F50", borderRadius: 7, padding: "11px 12px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" },
   headerLeft: { display: "flex", alignItems: "center", gap: 14, textAlign: "left" },
   logoMark: { width: 40, height: 40, borderRadius: "4px 12px 4px 4px", background: "#2E7D72", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoMonogram: { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 17, color: "#120F0D" },
